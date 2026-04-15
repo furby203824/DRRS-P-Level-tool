@@ -13,6 +13,10 @@
     <div class="wrap">
       <h1>DRRS P-Level Calculator</h1>
       <p class="tagline">Personnel Readiness per MCO 3000.13B &middot; Proof of Concept</p>
+      <nav class="header-nav">
+        <a href="#upload-section">Calculator</a>
+        <a href="#methodology-section">Methodology</a>
+      </nav>
     </div>
   </header>
 
@@ -119,6 +123,278 @@
         </table>
         <p class="muted small">Final P-Level = lower of the two percentages. Contractors excluded. P-6 only by HQMC PP&amp;O direction.</p>
       </div>
+    </section>
+
+    <section class="card methodology" id="methodology-section">
+      <h2>Methodology</h2>
+      <p class="muted">How P-Level is calculated. Reference for manual computation or audit.</p>
+
+      <article class="meth-block">
+        <div class="meth-num">01</div>
+        <div class="meth-body">
+          <h3>What P-Level Measures</h3>
+          <p>
+            P-Level is the personnel readiness rating for your unit per
+            <strong>MCO 3000.13B DRRS Marine Corps Readiness Reporting paragraph 7c</strong>.
+            It is the lower of two percentages: Personnel Strength and Critical MOS.
+            The lower (worse) band wins. P-1 is best, P-4 is worst. P-5 reserves for
+            non-reportable status. P-6 only by direction of HQMC PP&amp;O.
+          </p>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">02</div>
+        <div class="meth-body">
+          <h3>The Two Formulas</h3>
+          <div class="formula">
+            <div class="formula-label">Personnel Strength</div>
+            <code>((Assigned + Attached) &minus; (Detached + Non-Deployable + IA + JIA)) / T/O Authorized &times; 100</code>
+          </div>
+          <div class="formula">
+            <div class="formula-label">Critical MOS</div>
+            <code>((Crit Assigned + Crit Attached) &minus; (Crit Detached + Crit Non-Dep + Crit IA + Crit JIA)) / Crit T/O Authorized &times; 100</code>
+          </div>
+          <p class="muted small">
+            Same shape, different population. The Critical MOS formula only counts
+            Marines whose Billet MOS or PMOS is on the critical MOS list for your
+            unit type.
+          </p>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">03</div>
+        <div class="meth-body">
+          <h3>Band Tables</h3>
+          <div class="band-grid">
+            <div>
+              <div class="band-label">Personnel Strength</div>
+              <table class="data-table">
+                <tbody>
+                  <tr><td>P-1</td><td>90% to 100%</td></tr>
+                  <tr><td>P-2</td><td>80% to 89%</td></tr>
+                  <tr><td>P-3</td><td>70% to 79%</td></tr>
+                  <tr><td>P-4</td><td>0% to 69%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="band-label">Critical MOS</div>
+              <table class="data-table">
+                <tbody>
+                  <tr><td>P-1</td><td>85% to 100%</td></tr>
+                  <tr><td>P-2</td><td>75% to 84%</td></tr>
+                  <tr><td>P-3</td><td>65% to 74%</td></tr>
+                  <tr><td>P-4</td><td>0% to 64%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p class="muted small">
+            Critical MOS thresholds are 5 points lower at every band because rare
+            skills are harder to fill. A unit at 85% critical fill is still P-1
+            critical even though it would be P-2 on personnel strength.
+          </p>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">04</div>
+        <div class="meth-body">
+          <h3>Manual Calculation &mdash; Six Steps</h3>
+          <ol class="step-list">
+            <li>
+              <strong>Pull T/O Authorized.</strong>
+              From TFSMS, sum all authorized billets for your UIC. This is your
+              personnel strength denominator. Pull the critical MOS subset using the
+              unit type's critical MOS list. Both numbers stay fixed during the
+              report period.
+            </li>
+            <li>
+              <strong>Pull the Roster.</strong>
+              From AAA via Cognos, get every Marine assigned to or attached to your
+              UIC. Include detached Marines so you have full visibility. Exclude
+              contractors and civilians unless your T/O authorizes them.
+            </li>
+            <li>
+              <strong>Classify Each Marine.</strong>
+              Tag each Marine with one DRRS state: ASSIGNED, ATTACHED, DETACHED, IA,
+              or JIA. For ASSIGNED and ATTACHED Marines, also flag deployability
+              using the DLC code. Detached, IA, and JIA Marines reduce the numerator
+              by removing them from the pool entirely.
+            </li>
+            <li>
+              <strong>Compute the Numerator.</strong>
+              Add Assigned and Attached. Subtract Detached, Non-Deployable, IA, and
+              JIA. Non-Deployable only counts the Assigned and Attached Marines who
+              are non-deployable. Detached/IA/JIA Marines are already removed by
+              their DRRS state, so do not subtract them twice for non-deployability.
+            </li>
+            <li>
+              <strong>Divide and Multiply.</strong>
+              Numerator divided by T/O Authorized, times 100. Round to one decimal.
+              Repeat the entire calculation for the Critical MOS subset using the
+              critical roster and critical T/O denominator.
+            </li>
+            <li>
+              <strong>Map to Band and Take the Lower.</strong>
+              Map the Personnel Strength percentage to a band using the PS table.
+              Map the Critical MOS percentage using the CM table. Your final
+              P-Level is the lower (worse) of the two bands. Note which one is
+              binding for your remarks.
+            </li>
+          </ol>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">05</div>
+        <div class="meth-body">
+          <h3>Critical MOS Fill Rules</h3>
+          <p>
+            Per MCO 3000.13B paragraph 7c, the rules for whether a Marine counts as
+            filling a critical billet:
+          </p>
+          <dl class="rule-list">
+            <dt>BIC First</dt>
+            <dd>The Marine must be assigned to a Billet Identification Code on the unit's T/O.</dd>
+            <dt>BMOS Primary</dt>
+            <dd>If the Billet MOS is on the critical list, the fill counts toward critical MOS.</dd>
+            <dt>PMOS Secondary</dt>
+            <dd>If the BMOS is not critical but the Marine's PMOS is critical, the Marine fills the critical PMOS gap rather than their actual billet.</dd>
+            <dt>&plusmn;1 Grade</dt>
+            <dd>A Marine within one paygrade of the authorized billet grade counts as a valid fill. An E5 in an authorized E6 billet counts. An E5 in an authorized E7 billet does not.</dd>
+            <dt>No Double Count</dt>
+            <dd>A single Marine fills exactly one billet. If their BMOS is critical, the BMOS fill is the only one credited.</dd>
+            <dt>Qualified</dt>
+            <dd>The Marine must hold the required MOS qualification, not the title alone.</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">06</div>
+        <div class="meth-body">
+          <h3>Who Gets Excluded</h3>
+          <ul class="bullets">
+            <li>Contractors. Never count toward T/O strength or critical fill.</li>
+            <li>Civilian employees. Excluded unless the T/O authorizes them.</li>
+            <li>IRR Marines on inactive status.</li>
+            <li>Marines with EAS within 90 days. Typically flagged Non-Deployable per DLC code B.</li>
+            <li>Cadets and trainees not yet T/O assigned.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">07</div>
+        <div class="meth-body">
+          <h3>Worked Example</h3>
+          <p class="example-scenario">
+            <strong>Scenario:</strong> 50-billet detachment, 12 critical billets.
+          </p>
+          <div class="example-grid">
+            <div>
+              <div class="example-label">Roster</div>
+              <table class="data-table">
+                <tbody>
+                  <tr><td>Assigned</td><td class="num">45</td></tr>
+                  <tr><td>Attached</td><td class="num">3</td></tr>
+                  <tr><td>Detached</td><td class="num">2</td></tr>
+                  <tr><td>Non-Deployable (DLC N + DLC D)</td><td class="num">2</td></tr>
+                  <tr><td>IA / JIA</td><td class="num">0</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="example-label">Critical Fill</div>
+              <table class="data-table">
+                <tbody>
+                  <tr><td>Crit Assigned + Attached</td><td class="num">11</td></tr>
+                  <tr><td>Crit Detached</td><td class="num">0</td></tr>
+                  <tr><td>Crit Non-Deployable</td><td class="num">0</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="example-calc">
+            <div class="formula">
+              <div class="formula-label">Personnel Strength</div>
+              <code>Numerator = (45 + 3) &minus; (2 + 2 + 0 + 0) = 44</code>
+              <code>Percentage = 44 / 50 = <strong>88.0%</strong> &rarr; <span class="band-pill p2">P-2</span></code>
+            </div>
+            <div class="formula">
+              <div class="formula-label">Critical MOS</div>
+              <code>Numerator = 11 &minus; 0 = 11</code>
+              <code>Percentage = 11 / 12 = <strong>91.7%</strong> &rarr; <span class="band-pill p1">P-1</span></code>
+            </div>
+            <div class="formula final">
+              <div class="formula-label">Final P-Level</div>
+              <code>Lower of P-2 and P-1 = <span class="band-pill p2">P-2</span></code>
+              <p class="muted small">Binding factor: Personnel Strength. Critical MOS is healthy at P-1, but personnel strength drags the unit to P-2.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">A</div>
+        <div class="meth-body">
+          <h3>How This App Implements It</h3>
+          <p>Notes on where the tool's behavior maps to the methodology above:</p>
+          <ul class="bullets">
+            <li>
+              <strong>Numerator subtraction.</strong> The app counts Detached, IA,
+              and JIA via <code>DRRSStatus</code> and excludes them from the
+              Assigned+Attached pool. Non-Deployable (<code>DeployableFlag = N</code>)
+              is subtracted only among Assigned+Attached to avoid the double-count
+              the methodology calls out.
+            </li>
+            <li>
+              <strong>Limited duty.</strong> <code>DeployableFlag = L</code> Marines
+              are subtracted from the numerator (conservative read of "fully
+              deployable"). Adjust in <code>calculator.js</code> if your unit
+              policy counts them.
+            </li>
+            <li>
+              <strong>Critical MOS matching.</strong> Two-stage greedy fill:
+              first BMOS (Marine in seat for a critical billet), then PMOS
+              (qualified Marine credited toward an unfilled critical billet).
+              Within each stage, exact paygrade is preferred; &plusmn;1 grade is
+              the fallback. The same Marine is never counted twice.
+            </li>
+            <li>
+              <strong>Paygrade ladders.</strong> The &plusmn;1 rule applies on the
+              same E/W/O ladder. An O3 cannot fill an E8 billet even though the
+              numeric distance is small.
+            </li>
+            <li>
+              <strong>Contractors.</strong> Rows with <code>Service</code> of
+              <code>CTR</code> / <code>CONTRACTOR</code> are filtered out before
+              calculation.
+            </li>
+            <li>
+              <strong>Rounding.</strong> Percentages display to one decimal place.
+              Band lookup uses the unrounded value.
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="meth-block">
+        <div class="meth-num">&sect;</div>
+        <div class="meth-body">
+          <h3>Source Documents</h3>
+          <ul class="bullets">
+            <li>MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c</li>
+            <li>MARADMIN 518-21 DRRS-MC Consolidation to DRRS</li>
+            <li>Commander's Readiness Handbook (16 SEP 2020)</li>
+            <li>Personnel Readiness SHO/MOC (Updated OCT 2025)</li>
+          </ul>
+        </div>
+      </article>
     </section>
   </main>
 

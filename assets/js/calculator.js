@@ -104,49 +104,61 @@ window.PLevel = window.PLevel || {};
             MOS: s.BMOS,
             PayGrade: s.PayGrade,
             Description: descByMos[s.BMOS] || "",
-            filledBy: null
+            filledBy: null,
+            fillSource: null  // "BMOS" or "PMOS"
           });
         }
       }
     }
 
-    // Build the candidate Marine pool: only ASSIGNED or ATTACHED, deployable.
-    // PMOS must be in critical list. Tracked as available (not yet matched).
+    // BMOS-primary / PMOS-secondary per MCO 3000.13B 7c.
+    // A Marine's "fill MOS" is their BMOS if it's critical (they're in seat
+    // for that critical billet), otherwise their PMOS (they qualify to fill
+    // a gap). Only ASSIGNED/ATTACHED and deployable Marines count.
     const candidates = roster
       .map((m, idx) => ({ idx, m }))
       .filter(({ m }) => {
         const status = (m.DRRSStatus || "").toUpperCase();
         const flag = (m.DeployableFlag || "").toUpperCase();
-        return (status === "ASSIGNED" || status === "ATTACHED") &&
-               flag !== "N" && flag !== "L" &&
-               criticalMosSet.has(m.PMOS);
-      });
+        if (status !== "ASSIGNED" && status !== "ATTACHED") return false;
+        if (flag === "N" || flag === "L") return false;
+        return criticalMosSet.has(m.BMOS) || criticalMosSet.has(m.PMOS);
+      })
+      .map(({ idx, m }) => ({
+        idx,
+        m,
+        fillMos: criticalMosSet.has(m.BMOS) ? m.BMOS : m.PMOS,
+        fillSource: criticalMosSet.has(m.BMOS) ? "BMOS" : "PMOS"
+      }));
 
     const used = new Set();
 
-    // Greedy match: prefer exact paygrade match first, then +/-1.
-    // Pass 1 -- exact match (highest fidelity).
-    for (const b of billets) {
-      if (b.filledBy !== null) continue;
-      const cand = candidates.find(({ idx, m }) =>
-        !used.has(idx) && m.PMOS === b.MOS && (m.PayGrade || "").toUpperCase() === b.PayGrade
-      );
-      if (cand) {
-        b.filledBy = cand.idx;
-        used.add(cand.idx);
+    // Four-pass greedy match -- BMOS primary, exact grade preferred.
+    // Pass 1: BMOS match, exact paygrade.
+    // Pass 2: BMOS match, +/-1 paygrade.
+    // Pass 3: PMOS match, exact paygrade.
+    // Pass 4: PMOS match, +/-1 paygrade.
+    function tryFill(source, exact) {
+      for (const b of billets) {
+        if (b.filledBy !== null) continue;
+        const cand = candidates.find(({ idx, m, fillMos, fillSource }) => {
+          if (used.has(idx)) return false;
+          if (fillSource !== source) return false;
+          if (fillMos !== b.MOS) return false;
+          const grade = (m.PayGrade || "").toUpperCase();
+          return exact ? grade === b.PayGrade : withinOneGrade(grade, b.PayGrade);
+        });
+        if (cand) {
+          b.filledBy = cand.idx;
+          b.fillSource = cand.fillSource;
+          used.add(cand.idx);
+        }
       }
     }
-    // Pass 2 -- +/- 1 paygrade.
-    for (const b of billets) {
-      if (b.filledBy !== null) continue;
-      const cand = candidates.find(({ idx, m }) =>
-        !used.has(idx) && m.PMOS === b.MOS && withinOneGrade(m.PayGrade, b.PayGrade)
-      );
-      if (cand) {
-        b.filledBy = cand.idx;
-        used.add(cand.idx);
-      }
-    }
+    tryFill("BMOS", true);
+    tryFill("BMOS", false);
+    tryFill("PMOS", true);
+    tryFill("PMOS", false);
 
     // Aggregate per (MOS, PayGrade) for the breakdown table.
     const aggMap = new Map();

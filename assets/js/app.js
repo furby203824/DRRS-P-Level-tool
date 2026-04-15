@@ -15,7 +15,8 @@
   const state = {
     roster: null,
     structure: null,
-    critical: null
+    critical: null,
+    lastResult: null
   };
 
   // ---- DOM helpers ------------------------------------------------------
@@ -183,8 +184,140 @@
 
     renderAudit(c.audit);
 
+    state.lastResult = result;
+    setExportStatus("");
+
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---- Export ----------------------------------------------------------
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function formatDateDDMMMYY(d) {
+    const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+    const yy = String(d.getFullYear() % 100).padStart(2, "0");
+    return pad2(d.getDate()) + months[d.getMonth()] + yy;
+  }
+
+  function buildReadinessBrief(result, computedAt) {
+    const p = result.personnel;
+    const c = result.critical;
+    const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
+    const dateStr = formatDateDDMMMYY(computedAt);
+    const policyLine = result.options.countLimitedAsNonDeployable
+      ? "POLICY: LIMITED DUTY (DLC=L) COUNTED AS NON-DEPLOYABLE"
+      : "POLICY: LIMITED DUTY (DLC=L) COUNTED AS EFFECTIVE";
+    const driver = (result.band.driver || "").toUpperCase();
+
+    return [
+      "DRRS PERSONNEL READINESS",
+      `AS OF: ${dateStr}`,
+      `P-LEVEL: ${result.pLevel} (${driver})`,
+      "",
+      `PERSONNEL STRENGTH: ${p.pct.toFixed(1)}% (${p.effective} EFFECTIVE / ${p.authorized} AUTHORIZED)`,
+      `  ASG: ${p.assigned}  ATT: ${p.attached}  NON-DEP: ${p.nonDeployable}  LTD: ${p.limited}  DET: ${p.detached}  IA: ${p.ia}  JIA: ${p.jia}`,
+      "",
+      `CRITICAL MOS FILL: ${c.pct.toFixed(1)}% (${c.filled} / ${c.authorized} BILLETS)`,
+      `  BMOS EXACT: ${s.exactBMOS}  BMOS +/-1: ${s.flexBMOS}  PMOS EXACT: ${s.exactPMOS}  PMOS +/-1: ${s.flexPMOS}  GAPS: ${s.unfilled}`,
+      "",
+      policyLine,
+      `EXCLUDED: ${result.excludedContractors} CONTRACTOR ROW(S)`,
+      "REF: MCO 3000.13B PARA 7C",
+      "",
+      `COMPUTED: ${computedAt.toISOString()} BY DRRS P-LEVEL CALCULATOR (POC)`
+    ].join("\n");
+  }
+
+  function buildAuditCSV(result) {
+    const audit = (result.critical && result.critical.audit) || [];
+    const header = [
+      "MOS","Description","AuthorizedPayGrade","Status",
+      "FillerEDIPI","FillerName","FillerPayGrade",
+      "FillerBMOS","FillerPMOS","FillSource","MatchType"
+    ];
+    const esc = (v) => {
+      const s = v == null ? "" : String(v);
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    };
+    const lines = [header.join(",")];
+    for (const row of audit) {
+      lines.push([
+        row.MOS, row.Description, row.AuthorizedPayGrade,
+        row.Filled ? "FILLED" : "UNFILLED",
+        row.FillerEDIPI, row.FillerName, row.FillerPayGrade,
+        row.FillerBMOS, row.FillerPMOS,
+        row.FillSource || "", row.MatchType || ""
+      ].map(esc).join(","));
+    }
+    return lines.join("\n");
+  }
+
+  function triggerDownload(filename, mime, content) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function setExportStatus(msg) {
+    const el = document.getElementById("export-status");
+    if (!el) return;
+    el.textContent = msg;
+    if (msg) {
+      clearTimeout(setExportStatus._t);
+      setExportStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
+    }
+  }
+
+  async function copyBriefToClipboard() {
+    if (!state.lastResult) return;
+    const text = buildReadinessBrief(state.lastResult, new Date());
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older or file:// contexts.
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setExportStatus("Brief copied to clipboard");
+    } catch (err) {
+      setExportStatus("Copy failed: " + err.message);
+    }
+  }
+
+  function downloadJSON() {
+    if (!state.lastResult) return;
+    const payload = JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      reference: "MCO 3000.13B para 7c",
+      result: state.lastResult
+    }, null, 2);
+    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
+    triggerDownload(`plevel-audit-${stamp}.json`, "application/json", payload);
+    setExportStatus("JSON downloaded");
+  }
+
+  function downloadAuditCSV() {
+    if (!state.lastResult) return;
+    const csv = buildAuditCSV(state.lastResult);
+    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
+    triggerDownload(`plevel-audit-${stamp}.csv`, "text/csv", csv);
+    setExportStatus("Audit CSV downloaded");
   }
 
   // ---- Show-the-work (formulas with live numbers) ----------------------
@@ -303,10 +436,12 @@
   // ---- Reset -----------------------------------------------------------
   function reset() {
     state.roster = state.structure = state.critical = null;
+    state.lastResult = null;
     $$('input[type="file"]').forEach((el) => (el.value = ""));
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "No file"));
     showErrors([]);
     $("#results-section").hidden = true;
+    setExportStatus("");
     refreshCalculateButton();
   }
 
@@ -320,6 +455,19 @@
     });
     $("#load-sample").addEventListener("click", loadSample);
     $("#reset").addEventListener("click", reset);
+    const expandBtn = document.getElementById("meth-expand");
+    const collapseBtn = document.getElementById("meth-collapse");
+    if (expandBtn) {
+      expandBtn.addEventListener("click", () => {
+        $$(".methodology .meth-block").forEach((d) => (d.open = true));
+      });
+    }
+    if (collapseBtn) {
+      collapseBtn.addEventListener("click", () => {
+        $$(".methodology .meth-block").forEach((d) => (d.open = false));
+      });
+    }
+
     $("#calculate").addEventListener("click", () => {
       try {
         const options = {
@@ -333,6 +481,13 @@
         showErrors([`Calculation error: ${err.message}`]);
       }
     });
+
+    const copyBtn = document.getElementById("copy-brief");
+    const jsonBtn = document.getElementById("download-json");
+    const csvBtn = document.getElementById("download-audit-csv");
+    if (copyBtn) copyBtn.addEventListener("click", copyBriefToClipboard);
+    if (jsonBtn) jsonBtn.addEventListener("click", downloadJSON);
+    if (csvBtn) csvBtn.addEventListener("click", downloadAuditCSV);
   }
 
   if (document.readyState === "loading") {

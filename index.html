@@ -77,10 +77,18 @@
 
     <section class="card" id="results-section" hidden>
       <div class="results-head">
-        <h2>2. Results</h2>
-        <span class="cite-chip" title="Reference authority">
-          MCO 3000.13B &middot; para 7c
-        </span>
+        <div class="results-head-title">
+          <h2>2. Results</h2>
+          <span class="cite-chip" title="Reference authority">
+            MCO 3000.13B &middot; para 7c
+          </span>
+        </div>
+        <div class="results-actions">
+          <button id="copy-brief" class="btn btn-secondary small" type="button" title="Copy a paste-ready readiness brief to the clipboard">Copy Brief</button>
+          <button id="download-json" class="btn btn-ghost small" type="button" title="Download the full calculation as JSON">Download JSON</button>
+          <button id="download-audit-csv" class="btn btn-ghost small" type="button" title="Download the per-billet critical MOS audit trail as CSV">Download Audit CSV</button>
+          <span id="export-status" class="export-status" aria-live="polite"></span>
+        </div>
       </div>
 
       <div class="results-grid">
@@ -193,13 +201,21 @@
     </section>
 
     <section class="card methodology" id="methodology-section">
-      <h2>Methodology</h2>
-      <p class="muted">How P-Level is calculated. Reference for manual computation or audit.</p>
+      <div class="methodology-head">
+        <h2>Methodology</h2>
+        <div class="methodology-actions">
+          <button id="meth-expand" class="btn btn-ghost small" type="button">Expand All</button>
+          <button id="meth-collapse" class="btn btn-ghost small" type="button">Collapse All</button>
+        </div>
+      </div>
+      <p class="muted">How P-Level is calculated. Reference for manual computation or audit. Click any section to expand.</p>
 
-      <article class="meth-block">
-        <div class="meth-num">01</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">01</span>
+          <span class="meth-title">What P-Level Measures</span>
+        </summary>
         <div class="meth-body">
-          <h3>What P-Level Measures</h3>
           <p>
             P-Level is the personnel readiness rating for your unit per
             <strong>MCO 3000.13B DRRS Marine Corps Readiness Reporting paragraph 7c</strong>.
@@ -208,12 +224,14 @@
             non-reportable status. P-6 only by direction of HQMC PP&amp;O.
           </p>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">02</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">02</span>
+          <span class="meth-title">The Two Formulas</span>
+        </summary>
         <div class="meth-body">
-          <h3>The Two Formulas</h3>
           <div class="formula">
             <div class="formula-label">Personnel Strength</div>
             <code>((Assigned + Attached) &minus; (Detached + Non-Deployable + IA + JIA)) / T/O Authorized &times; 100</code>
@@ -228,12 +246,14 @@
             unit type.
           </p>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">03</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">03</span>
+          <span class="meth-title">Band Tables</span>
+        </summary>
         <div class="meth-body">
-          <h3>Band Tables</h3>
           <div class="band-grid">
             <div>
               <div class="band-label">Personnel Strength</div>
@@ -264,12 +284,14 @@
             critical even though it would be P-2 on personnel strength.
           </p>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">04</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">04</span>
+          <span class="meth-title">Manual Calculation &mdash; Six Steps</span>
+        </summary>
         <div class="meth-body">
-          <h3>Manual Calculation &mdash; Six Steps</h3>
           <ol class="step-list">
             <li>
               <strong>Pull T/O Authorized.</strong>
@@ -313,12 +335,14 @@
             </li>
           </ol>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">05</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">05</span>
+          <span class="meth-title">Critical MOS Fill Rules</span>
+        </summary>
         <div class="meth-body">
-          <h3>Critical MOS Fill Rules</h3>
           <p>
             Per MCO 3000.13B paragraph 7c, the rules for whether a Marine counts as
             filling a critical billet:
@@ -338,12 +362,14 @@
             <dd>The Marine must hold the required MOS qualification, not the title alone.</dd>
           </dl>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">06</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">06</span>
+          <span class="meth-title">Who Gets Excluded</span>
+        </summary>
         <div class="meth-body">
-          <h3>Who Gets Excluded</h3>
           <ul class="bullets">
             <li>Contractors. Never count toward T/O strength or critical fill.</li>
             <li>Civilian employees. Excluded unless the T/O authorizes them.</li>
@@ -352,12 +378,14 @@
             <li>Cadets and trainees not yet T/O assigned.</li>
           </ul>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">07</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">07</span>
+          <span class="meth-title">Worked Example</span>
+        </summary>
         <div class="meth-body">
-          <h3>Worked Example</h3>
           <p class="example-scenario">
             <strong>Scenario:</strong> 50-billet detachment, 12 critical billets.
           </p>
@@ -404,12 +432,14 @@
             </div>
           </div>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">A</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">A</span>
+          <span class="meth-title">How This App Implements It</span>
+        </summary>
         <div class="meth-body">
-          <h3>How This App Implements It</h3>
           <p>Notes on where the tool's behavior maps to the methodology above:</p>
           <ul class="bullets">
             <li>
@@ -448,12 +478,14 @@
             </li>
           </ul>
         </div>
-      </article>
+      </details>
 
-      <article class="meth-block">
-        <div class="meth-num">&sect;</div>
+      <details class="meth-block">
+        <summary>
+          <span class="meth-num">&sect;</span>
+          <span class="meth-title">Source Documents</span>
+        </summary>
         <div class="meth-body">
-          <h3>Source Documents</h3>
           <ul class="bullets">
             <li>MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c</li>
             <li>MARADMIN 518-21 DRRS-MC Consolidation to DRRS</li>
@@ -461,7 +493,7 @@
             <li>Personnel Readiness SHO/MOC (Updated OCT 2025)</li>
           </ul>
         </div>
-      </article>
+      </details>
     </section>
   </main>
 

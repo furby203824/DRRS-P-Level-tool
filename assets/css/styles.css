@@ -303,28 +303,74 @@ html, body {
   border-bottom-color: #cf9d2b;
 }
 
-/* Methodology */
-.methodology h2 { margin-bottom: 4px; }
-.meth-block {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 18px;
-  padding: 22px 0;
-  border-top: 1px solid var(--border);
+/* Methodology (accordion) */
+.methodology h2 { margin: 0; }
+.methodology-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
-.meth-block:first-of-type { border-top: none; padding-top: 18px; }
-.meth-num {
+.methodology-actions {
+  display: flex;
+  gap: 6px;
+}
+.btn.small { padding: 4px 10px; font-size: 12px; }
+
+.meth-block {
+  border-top: 1px solid var(--border);
+  padding: 0;
+}
+.meth-block:first-of-type { border-top: none; }
+.meth-block > summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 56px 1fr 18px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 0;
+  user-select: none;
+}
+.meth-block > summary::-webkit-details-marker { display: none; }
+.meth-block > summary::after {
+  content: "+";
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 24px;
+  font-size: 18px;
+  color: var(--ink-soft);
+  text-align: center;
+  transition: transform 0.15s, color 0.15s;
+  line-height: 1;
+}
+.meth-block[open] > summary::after {
+  content: "\2212"; /* minus */
+  color: var(--accent);
+}
+.meth-block > summary:hover .meth-title { color: var(--accent); }
+.meth-block .meth-num {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 18px;
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: var(--radius);
   text-align: center;
-  padding: 10px 0;
+  padding: 8px 0;
   line-height: 1;
-  align-self: start;
   letter-spacing: 0.04em;
+  min-width: 56px;
+}
+.meth-block .meth-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: color 0.15s;
+}
+.meth-block[open] .meth-title { color: var(--accent); }
+.meth-body {
+  padding: 0 0 18px 72px; /* align with title column */
 }
 .meth-body h3 {
   margin: 0 0 8px;
@@ -452,15 +498,34 @@ html, body {
   font-size: 12px;
 }
 
-/* Results head (title + citation chip) */
+/* Results head (title + citation chip + export actions) */
 .results-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.results-head-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .results-head h2 { margin: 0; }
+.results-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.export-status {
+  font-size: 12px;
+  color: var(--ok);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
 .cite-chip {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 11px;
@@ -588,8 +653,9 @@ html, body {
   .upload-grid { grid-template-columns: 1fr; }
   .results-grid { grid-template-columns: 1fr; }
   .plevel-value { font-size: 44px; }
-  .meth-block { grid-template-columns: 44px 1fr; gap: 14px; }
-  .meth-num { font-size: 18px; padding: 8px 0; }
+  .meth-block > summary { grid-template-columns: 44px 1fr 18px; gap: 12px; }
+  .meth-block .meth-num { font-size: 15px; padding: 6px 0; min-width: 44px; }
+  .meth-body { padding-left: 56px; }
   .band-grid, .example-grid { grid-template-columns: 1fr; }
   .rule-list { grid-template-columns: 1fr; gap: 2px 0; }
   .rule-list dt { margin-top: 8px; }

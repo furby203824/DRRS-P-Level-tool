@@ -59,30 +59,101 @@ window.PLevel = window.PLevel || {};
     });
   }
 
+  // Allowed enum values per the schema doc. Anything outside these is a
+  // warning, not a hard error -- real rosters have messy data and we want
+  // to surface anomalies without blocking a calculation.
+  const VALID_DRRS_STATUS = new Set(["ASSIGNED","ATTACHED","DETACHED","IA","JIA"]);
+  const VALID_DLC = new Set(["Y","N","L","D","B"]); // see SCHEMA.pdf DLC codes
+  const GRADE_PATTERN = /^(E[1-9]|W[1-5]|O([1-9]|10))$/;
+
+  // Validate a file. Returns { errors, warnings } where errors block the
+  // calculation and warnings are advisory.
   function validate(kind, rows) {
     const errors = [];
+    const warnings = [];
+    const label = SCHEMA[kind].label;
+
     if (!Array.isArray(rows) || rows.length === 0) {
-      errors.push(`${SCHEMA[kind].label}: file is empty.`);
-      return errors;
+      errors.push(`${label}: file is empty.`);
+      return wrapLegacy({ errors, warnings });
     }
     const cols = Object.keys(rows[0]);
     const missing = SCHEMA[kind].required.filter((c) => !cols.includes(c));
     if (missing.length) {
       errors.push(
-        `${SCHEMA[kind].label}: missing required column(s): ${missing.join(", ")}.`
+        `${label}: missing required column(s): ${missing.join(", ")}.`
       );
+      // Can't do per-row checks if the schema is busted.
+      return wrapLegacy({ errors, warnings });
     }
 
-    // Light type checks for the structure file's Authorized column.
-    if (kind === "structure" && !missing.includes("Authorized")) {
-      const bad = rows.findIndex((r) => isNaN(parseInt(r.Authorized, 10)));
-      if (bad >= 0) {
-        errors.push(
-          `T/O Structure: row ${bad + 2} has non-numeric "Authorized" value.`
-        );
-      }
+    // Per-row checks. Row numbers in messages are 1-based including header.
+    if (kind === "roster") {
+      rows.forEach((r, i) => {
+        const n = i + 2; // +1 for header, +1 for 0-based
+        if (!r.EDIPI) errors.push(`${label}: row ${n} missing EDIPI.`);
+        else if (!/^\d{10}$/.test(r.EDIPI)) {
+          warnings.push(`${label}: row ${n} EDIPI "${r.EDIPI}" is not 10 digits.`);
+        }
+        if (!r.PayGrade) errors.push(`${label}: row ${n} missing PayGrade.`);
+        else if (!GRADE_PATTERN.test(r.PayGrade.toUpperCase())) {
+          warnings.push(`${label}: row ${n} PayGrade "${r.PayGrade}" is not a recognized E/W/O grade.`);
+        }
+        const status = (r.DRRSStatus || "").toUpperCase();
+        if (!status) errors.push(`${label}: row ${n} missing DRRSStatus.`);
+        else if (!VALID_DRRS_STATUS.has(status)) {
+          warnings.push(`${label}: row ${n} DRRSStatus "${r.DRRSStatus}" not in {ASSIGNED, ATTACHED, DETACHED, IA, JIA}.`);
+        }
+        const dlc = (r.DeployableFlag || "").toUpperCase();
+        if (dlc && !VALID_DLC.has(dlc)) {
+          warnings.push(`${label}: row ${n} DeployableFlag "${r.DeployableFlag}" not in {Y, N, L, D, B}.`);
+        }
+        if (!r.BMOS) warnings.push(`${label}: row ${n} missing BMOS (may prevent critical-billet matching).`);
+      });
+    } else if (kind === "structure") {
+      rows.forEach((r, i) => {
+        const n = i + 2;
+        if (!r.BMOS) errors.push(`${label}: row ${n} missing BMOS.`);
+        if (!r.PayGrade) errors.push(`${label}: row ${n} missing PayGrade.`);
+        else if (!GRADE_PATTERN.test((r.PayGrade || "").toUpperCase())) {
+          warnings.push(`${label}: row ${n} PayGrade "${r.PayGrade}" is not a recognized E/W/O grade.`);
+        }
+        const authRaw = r.Authorized;
+        if (authRaw === undefined || authRaw === null || authRaw === "") {
+          errors.push(`${label}: row ${n} missing Authorized count.`);
+        } else {
+          const auth = parseInt(authRaw, 10);
+          if (isNaN(auth)) {
+            errors.push(`${label}: row ${n} has non-numeric Authorized value "${authRaw}".`);
+          } else if (auth < 0) {
+            errors.push(`${label}: row ${n} has negative Authorized value ${auth}.`);
+          }
+        }
+      });
+    } else if (kind === "critical") {
+      const seen = new Set();
+      rows.forEach((r, i) => {
+        const n = i + 2;
+        if (!r.MOS) errors.push(`${label}: row ${n} missing MOS.`);
+        else if (seen.has(r.MOS)) {
+          warnings.push(`${label}: row ${n} duplicates MOS "${r.MOS}".`);
+        } else {
+          seen.add(r.MOS);
+        }
+      });
     }
-    return errors;
+
+    return wrapLegacy({ errors, warnings });
+  }
+
+  // The original validate() returned a bare array of error strings. Keep
+  // that shape for back-compat (app.js checks .length) while exposing the
+  // structured form via properties on the array itself.
+  function wrapLegacy({ errors, warnings }) {
+    const arr = errors.slice();
+    arr.errors = errors;
+    arr.warnings = warnings;
+    return arr;
   }
 
   // Normalize roster rows: trim whitespace, uppercase status fields, coerce flags.

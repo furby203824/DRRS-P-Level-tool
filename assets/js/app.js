@@ -16,12 +16,39 @@
     roster: null,
     structure: null,
     critical: null,
-    lastResult: null
+    lastResult: null,
+    validation: { roster: null, structure: null, critical: null } // {errors, warnings}
   };
 
   // ---- DOM helpers ------------------------------------------------------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function readUnitProfile() {
+    return {
+      uic: ($("#unit-uic").value || "").trim().toUpperCase(),
+      name: ($("#unit-name").value || "").trim(),
+      asOf: ($("#unit-asof").value || "").trim() // YYYY-MM-DD or ""
+    };
+  }
+
+  function todayISODate() {
+    const d = new Date();
+    const pad = (n) => (n < 10 ? "0" + n : "" + n);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  // Parse a YYYY-MM-DD string to a Date in local time. Returns null if empty.
+  function parseAsOfDate(s) {
+    if (!s) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return null;
+    return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  }
+
+  function sanitizeForFilename(s) {
+    return (s || "").replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 16) || "NOUIC";
+  }
 
   function setSlotStatus(kind, status, ok) {
     const slot = document.querySelector(`.slot[data-slot="${kind}"]`);
@@ -33,18 +60,52 @@
     statusEl.textContent = status;
   }
 
+  // Legacy wrapper -- a few call sites still pass a flat array of errors.
   function showErrors(messages) {
+    renderValidationPanel(messages || [], []);
+  }
+
+  // Collect all errors and warnings from the three per-file validations
+  // and render them in the validation panel.
+  function renderFromState() {
+    const errs = [];
+    const warns = [];
+    for (const k of ["roster", "structure", "critical"]) {
+      const v = state.validation[k];
+      if (!v) continue;
+      if (v.errors) errs.push(...v.errors);
+      if (v.warnings) warns.push(...v.warnings);
+    }
+    renderValidationPanel(errs, warns);
+  }
+
+  function renderValidationPanel(errors, warnings) {
     const box = $("#errors");
-    if (!messages || messages.length === 0) {
+    if (!errors.length && !warnings.length) {
       box.hidden = true;
       box.innerHTML = "";
       return;
     }
     box.hidden = false;
-    box.innerHTML =
-      "<h4>Validation errors</h4><ul>" +
-      messages.map((m) => `<li>${escapeHtml(m)}</li>`).join("") +
-      "</ul>";
+    const parts = [];
+    if (errors.length) {
+      parts.push(
+        '<div class="v-block v-errors">' +
+        `<h4>Validation errors (${errors.length})</h4>` +
+        '<ul>' + errors.map((m) => `<li>${escapeHtml(m)}</li>`).join("") + '</ul>' +
+        '</div>'
+      );
+    }
+    if (warnings.length) {
+      parts.push(
+        '<div class="v-block v-warnings">' +
+        `<h4>Warnings (${warnings.length})</h4>` +
+        '<p class="muted small">Advisory only &mdash; the calculation still runs. Review for data quality.</p>' +
+        '<ul>' + warnings.map((m) => `<li>${escapeHtml(m)}</li>`).join("") + '</ul>' +
+        '</div>'
+      );
+    }
+    box.innerHTML = parts.join("");
   }
 
   function escapeHtml(s) {
@@ -63,19 +124,26 @@
     setSlotStatus(kind, `Parsing ${file.name}...`);
     try {
       const rows = await parser.parseCSV(file);
-      const errors = parser.validate(kind, rows);
-      if (errors.length) {
-        setSlotStatus(kind, errors[0], false);
-        showErrors(errors);
+      const validation = parser.validate(kind, rows);
+      state.validation[kind] = {
+        errors: validation.errors || [],
+        warnings: validation.warnings || []
+      };
+      if (validation.errors && validation.errors.length) {
+        setSlotStatus(kind, validation.errors[0], false);
         state[kind] = null;
       } else {
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        setSlotStatus(kind, `${file.name} -- ${normalized.length} rows`, true);
-        showErrors([]);
+        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
+        setSlotStatus(kind, `${file.name} -- ${normalized.length} rows${suffix}`, true);
       }
+      renderFromState();
     } catch (err) {
+      state.validation[kind] = { errors: [`${parser.SCHEMA[kind].label}: ${err.message}`], warnings: [] };
       setSlotStatus(kind, `Error: ${err.message}`, false);
+      renderFromState();
     }
     refreshCalculateButton();
   }
@@ -89,28 +157,42 @@
 
   // ---- Sample data loader ----------------------------------------------
   async function loadSample() {
-    const errors = [];
+    // Populate the Unit Profile with the sample unit identity so the
+    // brief/JSON/CSV exports don't read as [UIC NOT SET] on a demo run.
+    const uicEl = $("#unit-uic");
+    const nameEl = $("#unit-name");
+    if (uicEl && !uicEl.value) uicEl.value = "M00378";
+    if (nameEl && !nameEl.value) nameEl.value = "CLB-3 H&S Co (sample)";
+
     for (const kind of Object.keys(SAMPLE_PATHS)) {
       try {
         setSlotStatus(kind, "Loading sample...");
         const rows = await parser.fetchSampleCSV(SAMPLE_PATHS[kind]);
         const validation = parser.validate(kind, rows);
-        if (validation.length) {
-          errors.push(...validation);
-          setSlotStatus(kind, validation[0], false);
+        state.validation[kind] = {
+          errors: validation.errors || [],
+          warnings: validation.warnings || []
+        };
+        if (validation.errors && validation.errors.length) {
+          setSlotStatus(kind, validation.errors[0], false);
           state[kind] = null;
           continue;
         }
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        setSlotStatus(kind, `Sample loaded -- ${normalized.length} rows`, true);
+        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
+        setSlotStatus(kind, `Sample loaded -- ${normalized.length} rows${suffix}`, true);
       } catch (err) {
-        errors.push(`${parser.SCHEMA[kind].label}: ${err.message}`);
+        state.validation[kind] = {
+          errors: [`${parser.SCHEMA[kind].label}: ${err.message}`],
+          warnings: []
+        };
         setSlotStatus(kind, "Failed to load sample", false);
         state[kind] = null;
       }
     }
-    showErrors(errors);
+    renderFromState();
     refreshCalculateButton();
   }
 
@@ -200,19 +282,23 @@
     return pad2(d.getDate()) + months[d.getMonth()] + yy;
   }
 
-  function buildReadinessBrief(result, computedAt) {
+  function buildReadinessBrief(result, unit, asOfDate, computedAt) {
     const p = result.personnel;
     const c = result.critical;
     const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
-    const dateStr = formatDateDDMMMYY(computedAt);
+    const asOfStr = formatDateDDMMMYY(asOfDate);
     const policyLine = result.options.countLimitedAsNonDeployable
       ? "POLICY: LIMITED DUTY (DLC=L) COUNTED AS NON-DEPLOYABLE"
       : "POLICY: LIMITED DUTY (DLC=L) COUNTED AS EFFECTIVE";
     const driver = (result.band.driver || "").toUpperCase();
+    const unitLine = unit.name
+      ? `UNIT: ${unit.uic || "[UIC NOT SET]"} - ${unit.name.toUpperCase()}`
+      : `UNIT: ${unit.uic || "[UIC NOT SET]"}`;
 
     return [
       "DRRS PERSONNEL READINESS",
-      `AS OF: ${dateStr}`,
+      unitLine,
+      `AS OF: ${asOfStr}`,
       `P-LEVEL: ${result.pLevel} (${driver})`,
       "",
       `PERSONNEL STRENGTH: ${p.pct.toFixed(1)}% (${p.effective} EFFECTIVE / ${p.authorized} AUTHORIZED)`,
@@ -278,7 +364,9 @@
 
   async function copyBriefToClipboard() {
     if (!state.lastResult) return;
-    const text = buildReadinessBrief(state.lastResult, new Date());
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    const text = buildReadinessBrief(state.lastResult, unit, asOf, new Date());
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -302,21 +390,29 @@
 
   function downloadJSON() {
     if (!state.lastResult) return;
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
     const payload = JSON.stringify({
       generatedAt: new Date().toISOString(),
+      asOfDate: unit.asOf || todayISODate(),
+      unit: { uic: unit.uic, name: unit.name },
       reference: "MCO 3000.13B para 7c",
       result: state.lastResult
     }, null, 2);
-    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
-    triggerDownload(`plevel-audit-${stamp}.json`, "application/json", payload);
+    const uicPart = sanitizeForFilename(unit.uic);
+    const stamp = formatDateDDMMMYY(asOf).toLowerCase();
+    triggerDownload(`plevel-${uicPart}-${stamp}.json`, "application/json", payload);
     setExportStatus("JSON downloaded");
   }
 
   function downloadAuditCSV() {
     if (!state.lastResult) return;
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
     const csv = buildAuditCSV(state.lastResult);
-    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
-    triggerDownload(`plevel-audit-${stamp}.csv`, "text/csv", csv);
+    const uicPart = sanitizeForFilename(unit.uic);
+    const stamp = formatDateDDMMMYY(asOf).toLowerCase();
+    triggerDownload(`plevel-audit-${uicPart}-${stamp}.csv`, "text/csv", csv);
     setExportStatus("Audit CSV downloaded");
   }
 
@@ -437,22 +533,83 @@
   function reset() {
     state.roster = state.structure = state.critical = null;
     state.lastResult = null;
+    state.validation = { roster: null, structure: null, critical: null };
     $$('input[type="file"]').forEach((el) => (el.value = ""));
-    ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "No file"));
-    showErrors([]);
+    ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
+    renderFromState();
     $("#results-section").hidden = true;
     setExportStatus("");
     refreshCalculateButton();
   }
 
+  // ---- Drag-and-drop wiring -------------------------------------------
+  function attachDropHandlers() {
+    $$(".slot").forEach((slot) => {
+      const kind = slot.getAttribute("data-slot");
+      if (!kind) return;
+      slot.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        slot.classList.add("drag-over");
+      });
+      slot.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+        slot.classList.add("drag-over");
+      });
+      slot.addEventListener("dragleave", (e) => {
+        // Only drop the style when leaving the slot entirely, not a child.
+        if (e.relatedTarget && slot.contains(e.relatedTarget)) return;
+        slot.classList.remove("drag-over");
+      });
+      slot.addEventListener("drop", (e) => {
+        e.preventDefault();
+        slot.classList.remove("drag-over");
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        if (!/\.csv$/i.test(file.name)) {
+          setSlotStatus(kind, `Not a .csv file: ${file.name}`, false);
+          return;
+        }
+        // Sync the hidden input so the form reflects the chosen file.
+        const input = slot.querySelector('input[type="file"]');
+        if (input) {
+          try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+          } catch (_) { /* older browsers: input.files is read-only, skip */ }
+        }
+        handleFile(kind, file);
+      });
+      // Keyboard activation on the slot (tabindex=0 on the <label>).
+      slot.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          const input = slot.querySelector('input[type="file"]');
+          if (input) input.click();
+        }
+      });
+    });
+
+    // Prevent the browser from navigating away if a file is dropped outside
+    // a slot.
+    window.addEventListener("dragover", (e) => e.preventDefault());
+    window.addEventListener("drop", (e) => e.preventDefault());
+  }
+
   // ---- Wire it up ------------------------------------------------------
   function init() {
+    // Default the as-of date to today.
+    const asofInput = $("#unit-asof");
+    if (asofInput && !asofInput.value) asofInput.value = todayISODate();
+
     $$('input[type="file"][data-target]').forEach((el) => {
       el.addEventListener("change", (e) => {
         const kind = el.getAttribute("data-target");
         handleFile(kind, e.target.files[0]);
       });
     });
+    attachDropHandlers();
     $("#load-sample").addEventListener("click", loadSample);
     $("#reset").addEventListener("click", reset);
     const expandBtn = document.getElementById("meth-expand");

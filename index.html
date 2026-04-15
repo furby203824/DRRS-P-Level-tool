@@ -30,26 +30,45 @@
       <h2>1. Load Data</h2>
       <p class="muted">Upload the three CSVs, or load the bundled sample data to preview the UI.</p>
 
+      <fieldset class="unit-profile">
+        <legend>Unit Profile</legend>
+        <div class="unit-grid">
+          <label class="unit-field">
+            <span class="unit-label">UIC</span>
+            <input type="text" id="unit-uic" maxlength="12" placeholder="e.g. M00378" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="unit-field">
+            <span class="unit-label">Unit Name</span>
+            <input type="text" id="unit-name" maxlength="64" placeholder="e.g. CLB-3 H&amp;S Co" autocomplete="off" />
+          </label>
+          <label class="unit-field">
+            <span class="unit-label">As-Of Date</span>
+            <input type="date" id="unit-asof" />
+          </label>
+        </div>
+        <p class="policy-hint">Stamped onto the readiness brief, JSON export, and audit CSV filename. Defaults to today's date.</p>
+      </fieldset>
+
       <div class="upload-grid">
-        <label class="slot" data-slot="roster">
+        <label class="slot" data-slot="roster" tabindex="0" aria-label="Alpha Roster CSV file slot, click or drop a file">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
           <input type="file" accept=".csv" data-target="roster" />
-          <div class="slot-status" data-status="roster">No file</div>
+          <div class="slot-status" data-status="roster">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="structure">
+        <label class="slot" data-slot="structure" tabindex="0" aria-label="T/O Structure CSV file slot, click or drop a file">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
           <input type="file" accept=".csv" data-target="structure" />
-          <div class="slot-status" data-status="structure">No file</div>
+          <div class="slot-status" data-status="structure">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="critical">
+        <label class="slot" data-slot="critical" tabindex="0" aria-label="Critical MOS List CSV file slot, click or drop a file">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
           <input type="file" accept=".csv" data-target="critical" />
-          <div class="slot-status" data-status="critical">No file</div>
+          <div class="slot-status" data-status="critical">Drop CSV or click to browse</div>
         </label>
       </div>
 
@@ -234,16 +253,24 @@
         <div class="meth-body">
           <div class="formula">
             <div class="formula-label">Personnel Strength</div>
-            <code>((Assigned + Attached) &minus; (Detached + Non-Deployable + IA + JIA)) / T/O Authorized &times; 100</code>
+            <code>((Assigned + Attached) &minus; Non-Deployable) / T/O Authorized &times; 100</code>
           </div>
           <div class="formula">
             <div class="formula-label">Critical MOS</div>
-            <code>((Crit Assigned + Crit Attached) &minus; (Crit Detached + Crit Non-Dep + Crit IA + Crit JIA)) / Crit T/O Authorized &times; 100</code>
+            <code>Critical Billets Filled / Critical Billets Authorized &times; 100</code>
           </div>
           <p class="muted small">
-            Same shape, different population. The Critical MOS formula only counts
-            Marines whose Billet MOS or PMOS is on the critical MOS list for your
-            unit type.
+            Detached, IA, and JIA Marines are already excluded by DRRSStatus
+            (they are not in the Assigned+Attached pool), so they do not appear
+            in the subtraction &mdash; subtracting them again would double-count.
+            Non-Deployable only counts <code>DLC = N</code> (and, per unit
+            policy, <code>DLC = L</code>) Marines who are still in the
+            Assigned+Attached pool.
+          </p>
+          <p class="muted small">
+            Critical MOS numerator is computed by greedy matching of qualified
+            Marines to critical billets (BMOS-primary then PMOS-secondary, exact
+            grade preferred then &plusmn;1). Detail in block A.
           </p>
         </div>
       </details>
@@ -315,10 +342,12 @@
             </li>
             <li>
               <strong>Compute the Numerator.</strong>
-              Add Assigned and Attached. Subtract Detached, Non-Deployable, IA, and
-              JIA. Non-Deployable only counts the Assigned and Attached Marines who
-              are non-deployable. Detached/IA/JIA Marines are already removed by
-              their DRRS state, so do not subtract them twice for non-deployability.
+              Add Assigned and Attached. Subtract Non-Deployable (the
+              <code>DLC = N</code> Marines still in that Assigned+Attached pool;
+              and <code>DLC = L</code> too, per unit policy). Do <em>not</em>
+              subtract Detached / IA / JIA a second time &mdash; they are already
+              excluded because their DRRSStatus put them outside the
+              Assigned+Attached pool. Subtracting them again would double-count.
             </li>
             <li>
               <strong>Divide and Multiply.</strong>
@@ -394,21 +423,24 @@
               <div class="example-label">Roster</div>
               <table class="data-table">
                 <tbody>
-                  <tr><td>Assigned</td><td class="num">45</td></tr>
-                  <tr><td>Attached</td><td class="num">3</td></tr>
-                  <tr><td>Detached</td><td class="num">2</td></tr>
-                  <tr><td>Non-Deployable (DLC N + DLC D)</td><td class="num">2</td></tr>
-                  <tr><td>IA / JIA</td><td class="num">0</td></tr>
+                  <tr><td>Assigned (DRRSStatus = ASSIGNED)</td><td class="num">45</td></tr>
+                  <tr><td>Attached (DRRSStatus = ATTACHED)</td><td class="num">3</td></tr>
+                  <tr><td>Non-Deployable (DLC = N, in Asg+Att)</td><td class="num">4</td></tr>
+                  <tr><td>Limited (DLC = L, in Asg+Att)</td><td class="num">0</td></tr>
+                  <tr><td>Detached (separate, excluded)</td><td class="num">2</td></tr>
+                  <tr><td>IA / JIA (separate, excluded)</td><td class="num">0</td></tr>
                 </tbody>
               </table>
             </div>
             <div>
-              <div class="example-label">Critical Fill</div>
+              <div class="example-label">Critical Fill (12 billets)</div>
               <table class="data-table">
                 <tbody>
-                  <tr><td>Crit Assigned + Attached</td><td class="num">11</td></tr>
-                  <tr><td>Crit Detached</td><td class="num">0</td></tr>
-                  <tr><td>Crit Non-Deployable</td><td class="num">0</td></tr>
+                  <tr><td>BMOS exact-grade matches</td><td class="num">9</td></tr>
+                  <tr><td>BMOS &plusmn;1 grade matches</td><td class="num">1</td></tr>
+                  <tr><td>PMOS exact-grade matches</td><td class="num">1</td></tr>
+                  <tr><td>PMOS &plusmn;1 grade matches</td><td class="num">0</td></tr>
+                  <tr><td>Unfilled gaps</td><td class="num">1</td></tr>
                 </tbody>
               </table>
             </div>
@@ -417,12 +449,13 @@
           <div class="example-calc">
             <div class="formula">
               <div class="formula-label">Personnel Strength</div>
-              <code>Numerator = (45 + 3) &minus; (2 + 2 + 0 + 0) = 44</code>
+              <code>Numerator = (Assigned(45) + Attached(3)) &minus; NonDep(4) = 48 &minus; 4 = 44</code>
               <code>Percentage = 44 / 50 = <strong>88.0%</strong> &rarr; <span class="band-pill p2">P-2</span></code>
+              <code class="muted small">Detached(2) and IA/JIA(0) already excluded by DRRSStatus &mdash; do not subtract again.</code>
             </div>
             <div class="formula">
               <div class="formula-label">Critical MOS</div>
-              <code>Numerator = 11 &minus; 0 = 11</code>
+              <code>Numerator = 9 + 1 + 1 + 0 = 11 critical billets filled</code>
               <code>Percentage = 11 / 12 = <strong>91.7%</strong> &rarr; <span class="band-pill p1">P-1</span></code>
             </div>
             <div class="formula final">
@@ -451,9 +484,10 @@
             </li>
             <li>
               <strong>Limited duty.</strong> <code>DeployableFlag = L</code> Marines
-              are subtracted from the numerator (conservative read of "fully
-              deployable"). Adjust in <code>calculator.js</code> if your unit
-              policy counts them.
+              are subtracted from the numerator by default (conservative read of
+              &ldquo;fully deployable&rdquo;). Toggle the <em>Unit Policy</em>
+              checkbox on the upload card to count them toward effective strength
+              instead.
             </li>
             <li>
               <strong>Critical MOS matching.</strong> Two-stage greedy fill:

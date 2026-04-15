@@ -47,11 +47,15 @@ window.PLevel = window.PLevel || {};
     return { pBand, cBand, finalBand, driver };
   }
 
-  function calculatePersonnelStrength(roster, structure) {
+  function calculatePersonnelStrength(roster, structure, options) {
     // Numerator = (Assigned + Attached) - (non-deployable subset)
     // Detached / IA / JIA rows are already excluded from Assigned+Attached
     // since DRRSStatus is exclusive.
-    let assignedAttached = 0;
+    const countLimitedAsNonDeployable =
+      !options || options.countLimitedAsNonDeployable !== false;
+
+    let assigned = 0;
+    let attached = 0;
     let detached = 0;
     let ia = 0;
     let jia = 0;
@@ -61,8 +65,12 @@ window.PLevel = window.PLevel || {};
     for (const m of roster) {
       const status = (m.DRRSStatus || "").toUpperCase();
       const flag = (m.DeployableFlag || "").toUpperCase();
-      if (status === "ASSIGNED" || status === "ATTACHED") {
-        assignedAttached += 1;
+      if (status === "ASSIGNED") {
+        assigned += 1;
+        if (flag === "N") nonDeployable += 1;
+        else if (flag === "L") limited += 1;
+      } else if (status === "ATTACHED") {
+        attached += 1;
         if (flag === "N") nonDeployable += 1;
         else if (flag === "L") limited += 1;
       } else if (status === "DETACHED") detached += 1;
@@ -70,18 +78,23 @@ window.PLevel = window.PLevel || {};
       else if (status === "JIA") jia += 1;
     }
 
-    // Treat "Limited" as not fully counting toward effective strength.
-    const effective = assignedAttached - nonDeployable - limited;
+    const assignedAttached = assigned + attached;
+    const limitedSubtracted = countLimitedAsNonDeployable ? limited : 0;
+    const effective = assignedAttached - nonDeployable - limitedSubtracted;
     const authorized = structure.reduce((sum, r) => sum + (r.Authorized || 0), 0);
     const pct = authorized > 0 ? (effective / authorized) * 100 : 0;
 
     return {
+      assigned,
+      attached,
       assignedAttached,
       detached,
       ia,
       jia,
       nonDeployable,
       limited,
+      limitedSubtracted,
+      countLimitedAsNonDeployable,
       effective,
       authorized,
       pct
@@ -92,7 +105,6 @@ window.PLevel = window.PLevel || {};
     const criticalMosSet = new Set(criticalList.map((c) => c.MOS));
 
     // Build the authorized critical billets, indexed for fill matching.
-    // Each entry: { MOS, PayGrade, Authorized, Filled, Description }
     const billets = [];
     const descByMos = {};
     for (const c of criticalList) descByMos[c.MOS] = c.Description;
@@ -104,8 +116,9 @@ window.PLevel = window.PLevel || {};
             MOS: s.BMOS,
             PayGrade: s.PayGrade,
             Description: descByMos[s.BMOS] || "",
-            filledBy: null,
-            fillSource: null  // "BMOS" or "PMOS"
+            filledBy: null,     // index into the roster
+            fillSource: null,   // "BMOS" or "PMOS"
+            matchType: null     // "exact" or "plusMinusOne"
           });
         }
       }
@@ -151,6 +164,7 @@ window.PLevel = window.PLevel || {};
         if (cand) {
           b.filledBy = cand.idx;
           b.fillSource = cand.fillSource;
+          b.matchType = exact ? "exact" : "plusMinusOne";
           used.add(cand.idx);
         }
       }
@@ -160,7 +174,31 @@ window.PLevel = window.PLevel || {};
     tryFill("PMOS", true);
     tryFill("PMOS", false);
 
-    // Aggregate per (MOS, PayGrade) for the breakdown table.
+    // Build per-billet audit trail. Each row documents one decision.
+    const audit = billets.map((b) => {
+      const filler = b.filledBy !== null ? roster[b.filledBy] : null;
+      return {
+        MOS: b.MOS,
+        Description: b.Description,
+        AuthorizedPayGrade: b.PayGrade,
+        Filled: filler !== null,
+        FillerEDIPI: filler ? filler.EDIPI : "",
+        FillerName: filler
+          ? `${filler.Rank || ""} ${filler.LastName || ""}, ${filler.FirstName || ""}`.trim().replace(/^,\s*/, "")
+          : "",
+        FillerPayGrade: filler ? (filler.PayGrade || "") : "",
+        FillerBMOS: filler ? (filler.BMOS || "") : "",
+        FillerPMOS: filler ? (filler.PMOS || "") : "",
+        FillSource: b.fillSource,   // "BMOS", "PMOS", or null
+        MatchType: b.matchType       // "exact", "plusMinusOne", or null
+      };
+    }).sort((a, b) =>
+      a.MOS.localeCompare(b.MOS) ||
+      a.AuthorizedPayGrade.localeCompare(b.AuthorizedPayGrade) ||
+      (a.Filled === b.Filled ? 0 : a.Filled ? -1 : 1)
+    );
+
+    // Aggregate per (MOS, PayGrade) for the rollup table.
     const aggMap = new Map();
     for (const b of billets) {
       const key = b.MOS + "|" + b.PayGrade;
@@ -170,12 +208,22 @@ window.PLevel = window.PLevel || {};
           PayGrade: b.PayGrade,
           Description: b.Description,
           Authorized: 0,
-          Filled: 0
+          Filled: 0,
+          ExactBMOS: 0,
+          FlexBMOS: 0,
+          ExactPMOS: 0,
+          FlexPMOS: 0
         });
       }
       const row = aggMap.get(key);
       row.Authorized += 1;
-      if (b.filledBy !== null) row.Filled += 1;
+      if (b.filledBy !== null) {
+        row.Filled += 1;
+        if (b.fillSource === "BMOS" && b.matchType === "exact") row.ExactBMOS += 1;
+        else if (b.fillSource === "BMOS") row.FlexBMOS += 1;
+        else if (b.fillSource === "PMOS" && b.matchType === "exact") row.ExactPMOS += 1;
+        else if (b.fillSource === "PMOS") row.FlexPMOS += 1;
+      }
     }
     const breakdown = Array.from(aggMap.values()).sort((a, b) =>
       a.MOS.localeCompare(b.MOS) || a.PayGrade.localeCompare(b.PayGrade)
@@ -185,18 +233,28 @@ window.PLevel = window.PLevel || {};
     const filled = billets.filter((b) => b.filledBy !== null).length;
     const pct = authorized > 0 ? (filled / authorized) * 100 : 0;
 
-    return { authorized, filled, pct, breakdown };
+    // Summary of fill decisions for the show-the-work panel.
+    const fillSummary = {
+      exactBMOS: billets.filter((b) => b.fillSource === "BMOS" && b.matchType === "exact").length,
+      flexBMOS: billets.filter((b) => b.fillSource === "BMOS" && b.matchType === "plusMinusOne").length,
+      exactPMOS: billets.filter((b) => b.fillSource === "PMOS" && b.matchType === "exact").length,
+      flexPMOS: billets.filter((b) => b.fillSource === "PMOS" && b.matchType === "plusMinusOne").length,
+      unfilled: billets.filter((b) => b.filledBy === null).length
+    };
+
+    return { authorized, filled, pct, breakdown, audit, fillSummary };
   }
 
-  function calculate(roster, structure, criticalList) {
+  function calculate(roster, structure, criticalList, options) {
     // Exclude contractors per MCO 3000.13B. The schema doesn't carry a
     // contractor flag, but Component/Service can be checked defensively.
     const filteredRoster = roster.filter((m) => {
       const svc = (m.Service || "").toUpperCase();
       return svc !== "CTR" && svc !== "CONTRACTOR";
     });
+    const excludedContractors = roster.length - filteredRoster.length;
 
-    const personnel = calculatePersonnelStrength(filteredRoster, structure);
+    const personnel = calculatePersonnelStrength(filteredRoster, structure, options);
     const critical = calculateCriticalMOS(filteredRoster, structure, criticalList);
     const band = bandFor(personnel.pct, critical.pct);
 
@@ -205,7 +263,12 @@ window.PLevel = window.PLevel || {};
       critical,
       band,
       pLevel: "P-" + band.finalBand,
-      rosterCount: filteredRoster.length
+      rosterCount: filteredRoster.length,
+      excludedContractors,
+      options: {
+        countLimitedAsNonDeployable:
+          !options || options.countLimitedAsNonDeployable !== false
+      }
     };
   }
 

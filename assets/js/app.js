@@ -132,17 +132,26 @@
     $("#cm-detail").textContent =
       `${c.filled} filled / ${c.authorized} authorized critical billets`;
 
+    renderShowWork(result);
+
     // Personnel strength breakdown table
     const psBody = $("#ps-breakdown-table tbody");
     psBody.innerHTML = "";
+    const limitedNote = p.countLimitedAsNonDeployable
+      ? "Subtracted -- limited duty"
+      : "Not subtracted -- unit policy counts limited duty as effective";
+    const effectiveFormula = p.countLimitedAsNonDeployable
+      ? "(Assigned+Attached) - Non-Deployable - Limited"
+      : "(Assigned+Attached) - Non-Deployable";
     const psRows = [
-      ["Assigned + Attached", p.assignedAttached, "Marines on this unit's rolls counted positive"],
-      ["Non-Deployable (DLF = N)", p.nonDeployable, "Subtracted from numerator"],
-      ["Limited (DLF = L)", p.limited, "Subtracted -- limited duty"],
+      ["Assigned", p.assigned, "DRRSStatus = ASSIGNED"],
+      ["Attached", p.attached, "DRRSStatus = ATTACHED"],
+      ["Non-Deployable (DLC = N)", p.nonDeployable, "Subtracted from numerator"],
+      ["Limited (DLC = L)", p.limited, limitedNote],
       ["Detached (separate)", p.detached, "Excluded -- DRRSStatus = DETACHED"],
       ["IA Tasking (separate)", p.ia, "Excluded -- DRRSStatus = IA"],
       ["JIA Tasking (separate)", p.jia, "Excluded -- DRRSStatus = JIA"],
-      ["Effective Numerator", p.effective, "(Assigned+Attached) - Non-Deployable - Limited"],
+      ["Effective Numerator", p.effective, effectiveFormula],
       ["Authorized (T/O)", p.authorized, "Sum of T/O Authorized billets"]
     ];
     for (const [label, value, note] of psRows) {
@@ -151,11 +160,11 @@
       psBody.appendChild(tr);
     }
 
-    // Critical MOS breakdown
+    // Critical MOS rollup
     const cmBody = $("#cm-breakdown-table tbody");
     cmBody.innerHTML = "";
     if (c.breakdown.length === 0) {
-      cmBody.innerHTML = `<tr><td colspan="6" class="muted">No critical billets authorized for this unit.</td></tr>`;
+      cmBody.innerHTML = `<tr><td colspan="7" class="muted">No critical billets authorized for this unit.</td></tr>`;
     } else {
       for (const row of c.breakdown) {
         const fillPct = row.Authorized > 0 ? (row.Filled / row.Authorized) * 100 : 0;
@@ -166,13 +175,129 @@
           <td>${escapeHtml(row.PayGrade)}</td>
           <td class="num">${row.Authorized}</td>
           <td class="num">${row.Filled}</td>
-          <td class="num">${fillPct.toFixed(0)}%</td>`;
+          <td class="num">${fillPct.toFixed(0)}%</td>
+          <td>${renderFillMix(row)}</td>`;
         cmBody.appendChild(tr);
       }
     }
 
+    renderAudit(c.audit);
+
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---- Show-the-work (formulas with live numbers) ----------------------
+  function renderShowWork(result) {
+    const p = result.personnel;
+    const c = result.critical;
+
+    // Personnel Strength formula. Detached/IA/JIA are excluded upstream (by
+    // DRRSStatus) so they do not appear in the subtraction -- we note their
+    // counts on a separate line for audit completeness.
+    const limitedTerm = p.countLimitedAsNonDeployable
+      ? ` + ${p.limited}`
+      : "";
+    const limitedLabel = p.countLimitedAsNonDeployable
+      ? ` + Limited(${p.limited})`
+      : "";
+    const psNumerator =
+      `Numerator = (Assigned(${p.assigned}) + Attached(${p.attached})) ` +
+      `\u2212 (NonDep(${p.nonDeployable})${limitedLabel}) = ` +
+      `${p.assignedAttached} \u2212 ${p.nonDeployable + (p.limitedSubtracted || 0)} = ${p.effective}`;
+    const psExcluded =
+      `Separately excluded by DRRSStatus: Detached(${p.detached}) + IA(${p.ia}) + JIA(${p.jia})`;
+    const psPct =
+      `Percentage = ${p.effective} / ${p.authorized} = ` +
+      `${p.pct.toFixed(1)}% \u2192 P-${result.band.pBand}`;
+
+    $("#formula-ps-num").textContent = psNumerator;
+    // Re-purpose the second code slot to show excluded + percentage stacked.
+    $("#formula-ps-pct").innerHTML =
+      `${escapeHtml(psExcluded)}<br>${escapeHtml(psPct)}`;
+
+    const cmNumerator =
+      `Numerator = Critical billets filled = ${c.filled}`;
+    const cmPct = c.authorized > 0
+      ? `Percentage = ${c.filled} / ${c.authorized} = ${c.pct.toFixed(1)}% \u2192 P-${result.band.cBand}`
+      : `No critical billets authorized -- not applicable`;
+    $("#formula-cm-num").textContent = cmNumerator;
+    $("#formula-cm-pct").textContent = cmPct;
+
+    // Fill mix summary inside the critical MOS formula.
+    const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
+    $("#cm-fill-summary").innerHTML = c.authorized === 0 ? "" : `
+      <span class="tag tag-exact-bmos">B&middot;EX &times;${s.exactBMOS}</span>
+      <span class="tag tag-flex-bmos">B&middot;&plusmn;1 &times;${s.flexBMOS}</span>
+      <span class="tag tag-exact-pmos">P&middot;EX &times;${s.exactPMOS}</span>
+      <span class="tag tag-flex-pmos">P&middot;&plusmn;1 &times;${s.flexPMOS}</span>
+      <span class="tag tag-unfilled">GAP &times;${s.unfilled}</span>`;
+
+    const finalBand = result.band.finalBand;
+    $("#formula-final-line").textContent =
+      `Lower of P-${result.band.pBand} (Personnel) and P-${result.band.cBand} (Critical) = P-${finalBand}`;
+    $("#formula-final-note").textContent =
+      `Binding: ${result.band.driver}. ` +
+      (result.excludedContractors
+        ? `Excluded ${result.excludedContractors} contractor row(s) before calculation.`
+        : `No contractors filtered.`);
+  }
+
+  function renderFillMix(row) {
+    const parts = [];
+    if (row.ExactBMOS) parts.push(`<span class="tag tag-exact-bmos">B&middot;EX &times;${row.ExactBMOS}</span>`);
+    if (row.FlexBMOS) parts.push(`<span class="tag tag-flex-bmos">B&middot;&plusmn;1 &times;${row.FlexBMOS}</span>`);
+    if (row.ExactPMOS) parts.push(`<span class="tag tag-exact-pmos">P&middot;EX &times;${row.ExactPMOS}</span>`);
+    if (row.FlexPMOS) parts.push(`<span class="tag tag-flex-pmos">P&middot;&plusmn;1 &times;${row.FlexPMOS}</span>`);
+    const gap = row.Authorized - row.Filled;
+    if (gap) parts.push(`<span class="tag tag-unfilled">GAP &times;${gap}</span>`);
+    return parts.join(" ");
+  }
+
+  function renderAudit(audit) {
+    const body = $("#cm-audit-table tbody");
+    body.innerHTML = "";
+    if (!audit || audit.length === 0) {
+      body.innerHTML = `<tr><td colspan="7" class="muted">No critical billets to audit.</td></tr>`;
+      return;
+    }
+    for (const row of audit) {
+      const tr = document.createElement("tr");
+      if (!row.Filled) tr.classList.add("row-unfilled");
+      const status = row.Filled
+        ? `<span class="tag tag-filled">FILLED</span>`
+        : `<span class="tag tag-unfilled">UNFILLED</span>`;
+      const match = row.Filled
+        ? matchBadge(row.FillSource, row.MatchType)
+        : "&mdash;";
+      const filler = row.Filled
+        ? `${escapeHtml(row.FillerEDIPI)} &middot; ${escapeHtml(row.FillerName)}`
+        : `<span class="muted">&mdash;</span>`;
+      const fillerMos = row.Filled
+        ? `${escapeHtml(row.FillerBMOS)} / ${escapeHtml(row.FillerPMOS)}`
+        : `<span class="muted">&mdash;</span>`;
+      const fillerGrade = row.Filled
+        ? escapeHtml(row.FillerPayGrade)
+        : `<span class="muted">&mdash;</span>`;
+      tr.innerHTML = `
+        <td>${escapeHtml(row.MOS)}</td>
+        <td>${escapeHtml(row.AuthorizedPayGrade)}</td>
+        <td>${status}</td>
+        <td>${filler}</td>
+        <td>${fillerGrade}</td>
+        <td>${fillerMos}</td>
+        <td>${match}</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  function matchBadge(source, matchType) {
+    const key = source === "BMOS"
+      ? (matchType === "exact" ? "tag-exact-bmos" : "tag-flex-bmos")
+      : (matchType === "exact" ? "tag-exact-pmos" : "tag-flex-pmos");
+    const label = (source === "BMOS" ? "B" : "P") + "\u00b7" +
+      (matchType === "exact" ? "EX" : "\u00b11");
+    return `<span class="tag ${key}">${label}</span>`;
   }
 
   // ---- Reset -----------------------------------------------------------
@@ -197,7 +322,12 @@
     $("#reset").addEventListener("click", reset);
     $("#calculate").addEventListener("click", () => {
       try {
-        const result = calculator.calculate(state.roster, state.structure, state.critical);
+        const options = {
+          countLimitedAsNonDeployable: $("#policy-limited").checked
+        };
+        const result = calculator.calculate(
+          state.roster, state.structure, state.critical, options
+        );
         renderResults(result);
       } catch (err) {
         showErrors([`Calculation error: ${err.message}`]);

@@ -16,7 +16,8 @@
     roster: null,
     structure: null,
     critical: null,
-    lastResult: null
+    lastResult: null,
+    validation: { roster: null, structure: null, critical: null } // {errors, warnings}
   };
 
   // ---- DOM helpers ------------------------------------------------------
@@ -59,18 +60,52 @@
     statusEl.textContent = status;
   }
 
+  // Legacy wrapper -- a few call sites still pass a flat array of errors.
   function showErrors(messages) {
+    renderValidationPanel(messages || [], []);
+  }
+
+  // Collect all errors and warnings from the three per-file validations
+  // and render them in the validation panel.
+  function renderFromState() {
+    const errs = [];
+    const warns = [];
+    for (const k of ["roster", "structure", "critical"]) {
+      const v = state.validation[k];
+      if (!v) continue;
+      if (v.errors) errs.push(...v.errors);
+      if (v.warnings) warns.push(...v.warnings);
+    }
+    renderValidationPanel(errs, warns);
+  }
+
+  function renderValidationPanel(errors, warnings) {
     const box = $("#errors");
-    if (!messages || messages.length === 0) {
+    if (!errors.length && !warnings.length) {
       box.hidden = true;
       box.innerHTML = "";
       return;
     }
     box.hidden = false;
-    box.innerHTML =
-      "<h4>Validation errors</h4><ul>" +
-      messages.map((m) => `<li>${escapeHtml(m)}</li>`).join("") +
-      "</ul>";
+    const parts = [];
+    if (errors.length) {
+      parts.push(
+        '<div class="v-block v-errors">' +
+        `<h4>Validation errors (${errors.length})</h4>` +
+        '<ul>' + errors.map((m) => `<li>${escapeHtml(m)}</li>`).join("") + '</ul>' +
+        '</div>'
+      );
+    }
+    if (warnings.length) {
+      parts.push(
+        '<div class="v-block v-warnings">' +
+        `<h4>Warnings (${warnings.length})</h4>` +
+        '<p class="muted small">Advisory only &mdash; the calculation still runs. Review for data quality.</p>' +
+        '<ul>' + warnings.map((m) => `<li>${escapeHtml(m)}</li>`).join("") + '</ul>' +
+        '</div>'
+      );
+    }
+    box.innerHTML = parts.join("");
   }
 
   function escapeHtml(s) {
@@ -89,19 +124,26 @@
     setSlotStatus(kind, `Parsing ${file.name}...`);
     try {
       const rows = await parser.parseCSV(file);
-      const errors = parser.validate(kind, rows);
-      if (errors.length) {
-        setSlotStatus(kind, errors[0], false);
-        showErrors(errors);
+      const validation = parser.validate(kind, rows);
+      state.validation[kind] = {
+        errors: validation.errors || [],
+        warnings: validation.warnings || []
+      };
+      if (validation.errors && validation.errors.length) {
+        setSlotStatus(kind, validation.errors[0], false);
         state[kind] = null;
       } else {
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        setSlotStatus(kind, `${file.name} -- ${normalized.length} rows`, true);
-        showErrors([]);
+        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
+        setSlotStatus(kind, `${file.name} -- ${normalized.length} rows${suffix}`, true);
       }
+      renderFromState();
     } catch (err) {
+      state.validation[kind] = { errors: [`${parser.SCHEMA[kind].label}: ${err.message}`], warnings: [] };
       setSlotStatus(kind, `Error: ${err.message}`, false);
+      renderFromState();
     }
     refreshCalculateButton();
   }
@@ -122,28 +164,35 @@
     if (uicEl && !uicEl.value) uicEl.value = "M00378";
     if (nameEl && !nameEl.value) nameEl.value = "CLB-3 H&S Co (sample)";
 
-    const errors = [];
     for (const kind of Object.keys(SAMPLE_PATHS)) {
       try {
         setSlotStatus(kind, "Loading sample...");
         const rows = await parser.fetchSampleCSV(SAMPLE_PATHS[kind]);
         const validation = parser.validate(kind, rows);
-        if (validation.length) {
-          errors.push(...validation);
-          setSlotStatus(kind, validation[0], false);
+        state.validation[kind] = {
+          errors: validation.errors || [],
+          warnings: validation.warnings || []
+        };
+        if (validation.errors && validation.errors.length) {
+          setSlotStatus(kind, validation.errors[0], false);
           state[kind] = null;
           continue;
         }
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        setSlotStatus(kind, `Sample loaded -- ${normalized.length} rows`, true);
+        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
+        setSlotStatus(kind, `Sample loaded -- ${normalized.length} rows${suffix}`, true);
       } catch (err) {
-        errors.push(`${parser.SCHEMA[kind].label}: ${err.message}`);
+        state.validation[kind] = {
+          errors: [`${parser.SCHEMA[kind].label}: ${err.message}`],
+          warnings: []
+        };
         setSlotStatus(kind, "Failed to load sample", false);
         state[kind] = null;
       }
     }
-    showErrors(errors);
+    renderFromState();
     refreshCalculateButton();
   }
 
@@ -484,9 +533,10 @@
   function reset() {
     state.roster = state.structure = state.critical = null;
     state.lastResult = null;
+    state.validation = { roster: null, structure: null, critical: null };
     $$('input[type="file"]').forEach((el) => (el.value = ""));
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
-    showErrors([]);
+    renderFromState();
     $("#results-section").hidden = true;
     setExportStatus("");
     refreshCalculateButton();

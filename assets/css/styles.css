@@ -240,18 +240,31 @@ html, body {
 }
 .btn-ghost:hover { color: var(--ink); text-decoration: underline; }
 
-/* Errors */
+/* Validation (errors + warnings) */
 .errors {
   margin-top: 14px;
-  padding: 12px 14px;
+  font-size: 13px;
+}
+.v-block {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.v-block:last-child { margin-bottom: 0; }
+.v-block h4 { margin: 0 0 4px; font-size: 13px; }
+.v-block ul { margin: 4px 0 0 18px; padding: 0; font-variant-numeric: tabular-nums; }
+.v-block li { margin-bottom: 2px; }
+.v-errors {
   background: #fbf0f0;
   border-left: 4px solid var(--bad);
-  border-radius: var(--radius);
-  font-size: 13px;
   color: #6b1d1d;
 }
-.errors h4 { margin: 0 0 4px; font-size: 13px; }
-.errors ul { margin: 4px 0 0 18px; padding: 0; }
+.v-warnings {
+  background: #fff8eb;
+  border-left: 4px solid var(--warn);
+  color: #5a4310;
+}
+.v-warnings .muted { color: #8a7140; }
 
 /* Results grid */
 .results-grid {

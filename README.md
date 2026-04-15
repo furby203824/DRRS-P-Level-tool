@@ -63,4 +63,5 @@ generate alpha roster.pdf  -- Source of the sample data generator
 alpha roster example.csv
 to structure example.csv
 critical mos example.csv
+DESIGN_SYSTEM.md     -- UI style and scheme reference (for extension/handoff)
 ```

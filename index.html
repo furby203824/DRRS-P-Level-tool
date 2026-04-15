@@ -59,11 +59,29 @@
         <button id="reset" class="btn btn-ghost" type="button">Reset</button>
       </div>
 
+      <fieldset class="policy">
+        <legend>Unit Policy</legend>
+        <label class="policy-opt">
+          <input type="checkbox" id="policy-limited" checked />
+          <span>
+            Count <code>DLC = L</code> (Limited Duty) as non-deployable
+            <span class="policy-hint">
+              Default. Uncheck if your unit policy counts limited-duty Marines toward effective strength.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       <div id="errors" class="errors" hidden></div>
     </section>
 
     <section class="card" id="results-section" hidden>
-      <h2>2. Results</h2>
+      <div class="results-head">
+        <h2>2. Results</h2>
+        <span class="cite-chip" title="Reference authority">
+          MCO 3000.13B &middot; para 7c
+        </span>
+      </div>
 
       <div class="results-grid">
         <div class="plevel-card" id="plevel-card">
@@ -85,6 +103,30 @@
         </div>
       </div>
 
+      <div class="breakdown show-work" id="show-work">
+        <h3>Show the Work &mdash; This Run</h3>
+        <p class="muted small">
+          Actual numbers from your CSVs, plugged into the formulas. Same shape
+          as the worked example in the methodology below.
+        </p>
+        <div class="formula" id="formula-ps">
+          <div class="formula-label">Personnel Strength</div>
+          <code id="formula-ps-num"></code>
+          <code id="formula-ps-pct"></code>
+        </div>
+        <div class="formula" id="formula-cm">
+          <div class="formula-label">Critical MOS Fill</div>
+          <code id="formula-cm-num"></code>
+          <code id="formula-cm-pct"></code>
+          <div class="fill-summary" id="cm-fill-summary"></div>
+        </div>
+        <div class="formula final" id="formula-final">
+          <div class="formula-label">Final P-Level</div>
+          <code id="formula-final-line"></code>
+          <p class="muted small" id="formula-final-note"></p>
+        </div>
+      </div>
+
       <div class="breakdown">
         <h3>Personnel Strength Breakdown</h3>
         <table class="data-table" id="ps-breakdown-table">
@@ -102,11 +144,36 @@
             <tr>
               <th>MOS</th><th>Description</th><th>PayGrade</th>
               <th class="num">Authorized</th><th class="num">Filled</th><th class="num">Fill %</th>
+              <th>Fill Mix</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
+        <p class="muted small">
+          Fill Mix legend: <span class="tag tag-exact-bmos">B&middot;EX</span> BMOS exact grade &middot;
+          <span class="tag tag-flex-bmos">B&middot;&plusmn;1</span> BMOS &plusmn;1 grade &middot;
+          <span class="tag tag-exact-pmos">P&middot;EX</span> PMOS exact grade &middot;
+          <span class="tag tag-flex-pmos">P&middot;&plusmn;1</span> PMOS &plusmn;1 grade.
+        </p>
       </div>
+
+      <details class="breakdown audit">
+        <summary><h3 class="inline">Per-Billet Audit Trail</h3><span class="muted small">One row per critical billet. Shows the filling Marine and match type.</span></summary>
+        <table class="data-table" id="cm-audit-table">
+          <thead>
+            <tr>
+              <th>MOS</th>
+              <th>Auth Grade</th>
+              <th>Status</th>
+              <th>Filler (EDIPI / Rank / Name)</th>
+              <th>Filler Grade</th>
+              <th>Filler BMOS / PMOS</th>
+              <th>Match</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </details>
 
       <div class="breakdown">
         <h3>P-Level Band Reference</h3>

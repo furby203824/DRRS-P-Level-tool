@@ -9,18 +9,20 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#upload-section">Skip to calculator</a>
+
   <header class="site-header">
     <div class="wrap">
       <h1>DRRS P-Level Calculator</h1>
       <p class="tagline">Personnel Readiness per MCO 3000.13B &middot; Proof of Concept</p>
-      <nav class="header-nav">
+      <nav class="header-nav" aria-label="Page sections">
         <a href="#upload-section">Calculator</a>
         <a href="#methodology-section">Methodology</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap" id="main">
     <section class="banner opsec">
       <strong>OPSEC:</strong> All processing happens in your browser. Nothing is uploaded to a server.
       Do not load real PII into this POC without an approved hosting decision.
@@ -49,26 +51,26 @@
         <p class="policy-hint">Stamped onto the readiness brief, JSON export, and audit CSV filename. Defaults to today's date.</p>
       </fieldset>
 
-      <div class="upload-grid">
-        <label class="slot" data-slot="roster" tabindex="0" aria-label="Alpha Roster CSV file slot, click or drop a file">
+      <div class="upload-grid" role="group" aria-label="CSV upload slots">
+        <label class="slot" data-slot="roster">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
-          <input type="file" accept=".csv" data-target="roster" />
-          <div class="slot-status" data-status="roster">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="roster" aria-describedby="status-roster" />
+          <div class="slot-status" id="status-roster" data-status="roster" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="structure" tabindex="0" aria-label="T/O Structure CSV file slot, click or drop a file">
+        <label class="slot" data-slot="structure">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
-          <input type="file" accept=".csv" data-target="structure" />
-          <div class="slot-status" data-status="structure">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="structure" aria-describedby="status-structure" />
+          <div class="slot-status" id="status-structure" data-status="structure" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="critical" tabindex="0" aria-label="Critical MOS List CSV file slot, click or drop a file">
+        <label class="slot" data-slot="critical">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
-          <input type="file" accept=".csv" data-target="critical" />
-          <div class="slot-status" data-status="critical">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="critical" aria-describedby="status-critical" />
+          <div class="slot-status" id="status-critical" data-status="critical" aria-live="polite">Drop CSV or click to browse</div>
         </label>
       </div>
 
@@ -91,7 +93,7 @@
         </label>
       </fieldset>
 
-      <div id="errors" class="errors" hidden></div>
+      <div id="errors" class="errors" role="alert" aria-live="polite" hidden></div>
     </section>
 
     <section class="card" id="results-section" hidden>

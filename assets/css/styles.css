@@ -22,6 +22,26 @@
 
 * { box-sizing: border-box; }
 
+/* Skip link -- visible only on keyboard focus so a sighted keyboard user
+   can jump past the header. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  z-index: 1000;
+  text-decoration: none;
+  border-radius: 0 0 var(--radius) 0;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0;
+  outline: 3px solid #cf9d2b;
+  outline-offset: 2px;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -165,13 +185,16 @@ html, body {
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 .slot:hover,
-.slot:focus-visible {
+.slot:focus-within {
   border-color: var(--accent);
   background: var(--accent-soft);
-  outline: none;
 }
-.slot:focus-visible {
+.slot:focus-within {
   box-shadow: 0 0 0 2px var(--accent);
+}
+.slot input[type="file"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .slot.drag-over {
   border-color: var(--accent);
@@ -221,12 +244,17 @@ html, body {
   font-weight: 500;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .btn-primary {
   background: var(--accent);
   color: #fff;
 }
 .btn-primary:hover:not(:disabled) { background: #15294a; }
 .btn-primary:disabled { background: #aab6c4; cursor: not-allowed; }
+.btn-primary:focus-visible { outline-color: #cf9d2b; }
 .btn-secondary {
   background: #fff;
   color: var(--accent);
@@ -408,6 +436,16 @@ html, body {
   user-select: none;
 }
 .meth-block > summary::-webkit-details-marker { display: none; }
+.meth-block > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.audit > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .meth-block > summary::after {
   content: "+";
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;

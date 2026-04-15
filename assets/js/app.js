@@ -581,14 +581,6 @@
         }
         handleFile(kind, file);
       });
-      // Keyboard activation on the slot (tabindex=0 on the <label>).
-      slot.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          const input = slot.querySelector('input[type="file"]');
-          if (input) input.click();
-        }
-      });
     });
 
     // Prevent the browser from navigating away if a file is dropped outside

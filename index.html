@@ -30,26 +30,45 @@
       <h2>1. Load Data</h2>
       <p class="muted">Upload the three CSVs, or load the bundled sample data to preview the UI.</p>
 
+      <fieldset class="unit-profile">
+        <legend>Unit Profile</legend>
+        <div class="unit-grid">
+          <label class="unit-field">
+            <span class="unit-label">UIC</span>
+            <input type="text" id="unit-uic" maxlength="12" placeholder="e.g. M00378" autocomplete="off" spellcheck="false" />
+          </label>
+          <label class="unit-field">
+            <span class="unit-label">Unit Name</span>
+            <input type="text" id="unit-name" maxlength="64" placeholder="e.g. CLB-3 H&amp;S Co" autocomplete="off" />
+          </label>
+          <label class="unit-field">
+            <span class="unit-label">As-Of Date</span>
+            <input type="date" id="unit-asof" />
+          </label>
+        </div>
+        <p class="policy-hint">Stamped onto the readiness brief, JSON export, and audit CSV filename. Defaults to today's date.</p>
+      </fieldset>
+
       <div class="upload-grid">
-        <label class="slot" data-slot="roster">
+        <label class="slot" data-slot="roster" tabindex="0" aria-label="Alpha Roster CSV file slot, click or drop a file">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
           <input type="file" accept=".csv" data-target="roster" />
-          <div class="slot-status" data-status="roster">No file</div>
+          <div class="slot-status" data-status="roster">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="structure">
+        <label class="slot" data-slot="structure" tabindex="0" aria-label="T/O Structure CSV file slot, click or drop a file">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
           <input type="file" accept=".csv" data-target="structure" />
-          <div class="slot-status" data-status="structure">No file</div>
+          <div class="slot-status" data-status="structure">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="critical">
+        <label class="slot" data-slot="critical" tabindex="0" aria-label="Critical MOS List CSV file slot, click or drop a file">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
           <input type="file" accept=".csv" data-target="critical" />
-          <div class="slot-status" data-status="critical">No file</div>
+          <div class="slot-status" data-status="critical">Drop CSV or click to browse</div>
         </label>
       </div>
 

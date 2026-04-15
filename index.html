@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRRS P-Level Calculator</title>
+  <meta name="description" content="USMC Personnel Readiness (P-Level) calculator per MCO 3000.13B. Client-side only." />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>DRRS P-Level Calculator</h1>
+      <p class="tagline">Personnel Readiness per MCO 3000.13B &middot; Proof of Concept</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="banner opsec">
+      <strong>OPSEC:</strong> All processing happens in your browser. Nothing is uploaded to a server.
+      Do not load real PII into this POC without an approved hosting decision.
+    </section>
+
+    <section class="card" id="upload-section">
+      <h2>1. Load Data</h2>
+      <p class="muted">Upload the three CSVs, or load the bundled sample data to preview the UI.</p>
+
+      <div class="upload-grid">
+        <label class="slot" data-slot="roster">
+          <div class="slot-title">Alpha Roster</div>
+          <div class="slot-sub">One row per Marine / service member</div>
+          <input type="file" accept=".csv" data-target="roster" />
+          <div class="slot-status" data-status="roster">No file</div>
+        </label>
+
+        <label class="slot" data-slot="structure">
+          <div class="slot-title">T/O Structure</div>
+          <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
+          <input type="file" accept=".csv" data-target="structure" />
+          <div class="slot-status" data-status="structure">No file</div>
+        </label>
+
+        <label class="slot" data-slot="critical">
+          <div class="slot-title">Critical MOS List</div>
+          <div class="slot-sub">Mission-essential MOS for unit type</div>
+          <input type="file" accept=".csv" data-target="critical" />
+          <div class="slot-status" data-status="critical">No file</div>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="load-sample" class="btn btn-secondary" type="button">Load Sample Data</button>
+        <button id="calculate" class="btn btn-primary" type="button" disabled>Calculate P-Level</button>
+        <button id="reset" class="btn btn-ghost" type="button">Reset</button>
+      </div>
+
+      <div id="errors" class="errors" hidden></div>
+    </section>
+
+    <section class="card" id="results-section" hidden>
+      <h2>2. Results</h2>
+
+      <div class="results-grid">
+        <div class="plevel-card" id="plevel-card">
+          <div class="plevel-label">Overall P-Level</div>
+          <div class="plevel-value" id="plevel-value">&mdash;</div>
+          <div class="plevel-driver" id="plevel-driver"></div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Personnel Strength</div>
+          <div class="metric-value"><span id="ps-pct">&mdash;</span><span class="metric-unit">%</span></div>
+          <div class="metric-detail" id="ps-detail"></div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Critical MOS</div>
+          <div class="metric-value"><span id="cm-pct">&mdash;</span><span class="metric-unit">%</span></div>
+          <div class="metric-detail" id="cm-detail"></div>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <h3>Personnel Strength Breakdown</h3>
+        <table class="data-table" id="ps-breakdown-table">
+          <thead>
+            <tr><th>Category</th><th class="num">Count</th><th>Notes</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="breakdown">
+        <h3>Critical MOS Fill (&plusmn;1 paygrade rule)</h3>
+        <table class="data-table" id="cm-breakdown-table">
+          <thead>
+            <tr>
+              <th>MOS</th><th>Description</th><th>PayGrade</th>
+              <th class="num">Authorized</th><th class="num">Filled</th><th class="num">Fill %</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="breakdown">
+        <h3>P-Level Band Reference</h3>
+        <table class="data-table">
+          <thead>
+            <tr><th>P-Level</th><th>Personnel Strength %</th><th>Critical MOS %</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>P-1</td><td>90 &ndash; 100</td><td>85 &ndash; 100</td></tr>
+            <tr><td>P-2</td><td>80 &ndash; 89</td><td>75 &ndash; 84</td></tr>
+            <tr><td>P-3</td><td>70 &ndash; 79</td><td>65 &ndash; 74</td></tr>
+            <tr><td>P-4</td><td>0 &ndash; 69</td><td>0 &ndash; 64</td></tr>
+          </tbody>
+        </table>
+        <p class="muted small">Final P-Level = lower of the two percentages. Contractors excluded. P-6 only by HQMC PP&amp;O direction.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="small muted">
+        Implements MCO 3000.13B para 7c. Synthetic sample data only &mdash; EDIPIs prefixed <code>99</code>.
+      </p>
+    </div>
+  </footer>
+
+  <script src="assets/js/parser.js"></script>
+  <script src="assets/js/calculator.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

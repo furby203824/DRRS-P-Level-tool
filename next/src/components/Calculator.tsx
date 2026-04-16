@@ -7,6 +7,7 @@ import { calculate, type CalcResult, type RosterRow, type StructureRow, type Cri
 import { validate, normalizeRoster, normalizeStructure, normalizeCritical, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
+import { Shield, Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download } from "lucide-react";
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";
@@ -423,7 +424,7 @@ export function Calculator() {
                 type="date"
                 value={asOfDate}
                 onChange={(e) => setAsOfDate(e.target.value)}
-                className="mt-1 block w-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-mono text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+                className="mt-1 block w-full border border-stone-700 bg-stone-900 px-2 py-1.5 font-mono text-sm text-stone-100 focus:border-amber-600 focus:outline-none"
               />
             </div>
           </div>
@@ -438,17 +439,19 @@ export function Calculator() {
 
         {/* Actions */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button onClick={loadSample} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">
+          <button onClick={loadSample} className="border border-stone-700 bg-stone-800 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-stone-300 hover:bg-stone-700">
             Load Sample Data
           </button>
-          <button onClick={doCalculate} disabled={!canCalculate} className="border border-[var(--color-accent)] bg-[var(--color-accent-strong)] px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-40">
+          <button onClick={doCalculate} disabled={!canCalculate} className="flex items-center gap-1.5 border border-amber-700 bg-amber-900 px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-amber-100 hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-40">
+            <CalcIcon size={14} strokeWidth={1.5} />
             Calculate P-Level
           </button>
-          <button onClick={doReset} className="px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-ink)]">
+          <button onClick={doReset} className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-stone-500 hover:text-stone-100">
+            <RotateCcw size={12} strokeWidth={1.5} />
             Reset
           </button>
           <label className="ml-auto flex items-center gap-2 font-mono text-xs text-[var(--color-muted)]">
-            <input type="checkbox" checked={limitedPolicy} onChange={(e) => setLimitedPolicy(e.target.checked)} className="accent-[var(--color-accent)]" />
+            <input type="checkbox" checked={limitedPolicy} onChange={(e) => setLimitedPolicy(e.target.checked)} className="accent-amber-600" />
             DLC=L as non-deployable
           </label>
         </div>
@@ -464,7 +467,7 @@ export function Calculator() {
             )}
             {allWarnings.length > 0 && (
               <div className="border-l-4 border-[var(--color-p2)] bg-[var(--color-p2)]/10 px-3 py-2 text-xs text-[var(--color-p2)]">
-                <strong>Warnings ({allWarnings.length})</strong>
+                <strong className="flex items-center gap-1"><AlertTriangle size={12} strokeWidth={1.5} /> Warnings ({allWarnings.length})</strong>
                 <ul className="ml-4 mt-1 list-disc">{allWarnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
               </div>
             )}
@@ -480,11 +483,11 @@ export function Calculator() {
               2. Results
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={copyBrief} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">Copy Brief</button>
-              <button onClick={downloadPDF} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">PDF</button>
-              <button onClick={downloadXLSX} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">XLSX</button>
-              <button onClick={downloadJSON} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">JSON</button>
-              <button onClick={downloadCSV} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Audit CSV</button>
+              <button onClick={copyBrief} className="flex items-center gap-1 border border-amber-700 bg-amber-900 px-2 py-1 font-mono text-xs text-amber-100 hover:bg-amber-800"><Copy size={12} strokeWidth={1.5} /> Copy Brief</button>
+              <button onClick={downloadPDF} className="flex items-center gap-1 border border-amber-700 bg-amber-900 px-2 py-1 font-mono text-xs text-amber-100 hover:bg-amber-800"><Download size={12} strokeWidth={1.5} /> PDF</button>
+              <button onClick={downloadXLSX} className="flex items-center gap-1 border border-amber-700 bg-amber-900 px-2 py-1 font-mono text-xs text-amber-100 hover:bg-amber-800"><Download size={12} strokeWidth={1.5} /> XLSX</button>
+              <button onClick={downloadJSON} className="flex items-center gap-1 border border-stone-700 bg-stone-800 px-2 py-1 font-mono text-xs text-stone-300 hover:bg-stone-700"><Download size={12} strokeWidth={1.5} /> JSON</button>
+              <button onClick={downloadCSV} className="flex items-center gap-1 border border-stone-700 bg-stone-800 px-2 py-1 font-mono text-xs text-stone-300 hover:bg-stone-700"><Download size={12} strokeWidth={1.5} /> Audit CSV</button>
               <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{exportMsg}</span>
             </div>
           </div>
@@ -554,7 +557,7 @@ export function Calculator() {
                 DRRS Remarks Brief
               </span>
               <label className="flex items-center gap-1.5 font-mono text-xs text-[var(--color-muted)]">
-                <input type="checkbox" checked={drrsReady} onChange={(e) => setDrrsReady(e.target.checked)} className="accent-[var(--color-accent)]" />
+                <input type="checkbox" checked={drrsReady} onChange={(e) => setDrrsReady(e.target.checked)} className="accent-amber-600" />
                 DRRS-Ready
               </label>
               <button
@@ -577,7 +580,7 @@ export function Calculator() {
               value={briefText}
               onChange={(e) => setBriefText(e.target.value)}
               rows={16}
-              className="mt-2 block w-full resize-y border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-mono text-xs leading-relaxed text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
+              className="mt-2 block w-full resize-y border border-stone-700 bg-stone-900 p-3 font-mono text-xs leading-relaxed text-stone-100 focus:border-amber-600 focus:outline-none"
               aria-label="Readiness brief, editable before copy"
             />
           </div>
@@ -629,7 +632,7 @@ export function Calculator() {
       {/* Profile actions + Wipe Local Data */}
       <div className="mb-8 flex flex-wrap items-center gap-3 border-t border-[var(--color-elevated)] pt-4">
         <label className="flex items-center gap-1.5 font-mono text-xs text-[var(--color-muted)]">
-          <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-[var(--color-accent)]" />
+          <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-amber-600" />
           Encrypt export
         </label>
         <button onClick={doExportProfile} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>

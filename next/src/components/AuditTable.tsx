@@ -31,8 +31,8 @@ export function AuditTable({ audit }: Props) {
         aria-expanded={open}
       >
         {open
-          ? <ChevronDown size={14} strokeWidth={1.5} className="text-stone-500" />
-          : <ChevronRight size={14} strokeWidth={1.5} className="text-stone-500" />
+          ? <ChevronDown size={14} strokeWidth={1.5} className="text-[var(--color-mute-2)]" />
+          : <ChevronRight size={14} strokeWidth={1.5} className="text-[var(--color-mute-2)]" />
         }
         <span className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
           Per-Billet Audit Trail

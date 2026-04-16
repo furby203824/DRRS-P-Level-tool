@@ -37,6 +37,9 @@ export default function Home() {
                 Personnel Readiness calculator. Client-side only &mdash; no
                 personnel data leaves the browser.
               </p>
+              <p className="mt-0.5 font-mono text-xs text-[var(--color-mute-2)]">
+                v2.0 &middot; Proof of Concept &middot; UNCLASSIFIED
+              </p>
             </div>
           </div>
         </header>

@@ -92,6 +92,7 @@ export interface AuditRow {
   MOS: string;
   Description: string;
   AuthorizedPayGrade: string;
+  BIC: string;
   Filled: boolean;
   FillerEDIPI: string;
   FillerName: string;
@@ -320,6 +321,7 @@ function calculateCriticalMOS(
         MOS: b.MOS,
         Description: b.Description,
         AuthorizedPayGrade: b.PayGrade,
+        BIC: filler?.BIC ?? "",
         Filled: filler !== null,
         FillerEDIPI: filler?.EDIPI ?? "",
         FillerName: filler

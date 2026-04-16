@@ -1,7 +1,8 @@
-import Image from "next/image";
 import { ClassificationBanner } from "@/components/ClassificationBanner";
 import { Calculator } from "@/components/Calculator";
 import { MethodologyAccordion } from "@/components/MethodologyAccordion";
+
+const basePath = process.env.NODE_ENV === "production" ? "/DRRS-P-Level-tool" : "";
 
 export default function Home() {
   return (
@@ -14,13 +15,12 @@ export default function Home() {
             MCO 3000.13B &middot; para 7c
           </p>
           <div className="mt-2 flex items-center gap-4">
-            <Image
-              src="/mccsss-seal.png"
+            <img
+              src={`${basePath}/mccsss-seal.png`}
               alt="Marine Corps Combat Service Support Schools seal"
               width={56}
               height={56}
               className="flex-shrink-0"
-              priority
             />
             <div>
               <h1 className="font-mono text-3xl font-black tracking-wide text-[var(--color-ink)]">

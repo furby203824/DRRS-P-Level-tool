@@ -13,6 +13,7 @@ import { FileSlot } from "./FileSlot";
 import { AuditTable } from "./AuditTable";
 import { HistoryPanel } from "./HistoryPanel";
 import { saveSnapshot, snapshotFromResult } from "@/lib/history";
+import { exportPDF, exportXLSX } from "@/lib/exports";
 import { loadProfile, saveProfile, clearProfile, encryptProfile, decryptProfile, CRYPTO_MIN_PASSPHRASE, PROFILE_KEY, type ProfileData, type EncryptedEnvelope } from "@/lib/persistence";
 import { HISTORY_STORAGE_KEY, clearHistory as clearHistoryStorage } from "@/lib/history";
 
@@ -300,6 +301,24 @@ export function Calculator() {
     flashExport("Audit CSV downloaded");
   }, [result, detectedUnit, asOfDate]);
 
+  const downloadPDF = useCallback(async () => {
+    if (!result) return;
+    const unit = { uic: detectedUnit.uic, name: detectedUnit.name, asOf: asOfDate };
+    try {
+      await exportPDF(result, unit, briefText);
+      flashExport("PDF downloaded");
+    } catch (err) { flashExport("PDF failed: " + (err as Error).message); }
+  }, [result, detectedUnit, asOfDate, briefText]);
+
+  const downloadXLSX = useCallback(async () => {
+    if (!result) return;
+    const unit = { uic: detectedUnit.uic, name: detectedUnit.name, asOf: asOfDate };
+    try {
+      await exportXLSX(result, unit);
+      flashExport("XLSX downloaded");
+    } catch (err) { flashExport("XLSX failed: " + (err as Error).message); }
+  }, [result, detectedUnit, asOfDate]);
+
   // Profile export/import
   const profileImportRef = useRef<HTMLInputElement>(null);
 
@@ -462,6 +481,8 @@ export function Calculator() {
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={copyBrief} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">Copy Brief</button>
+              <button onClick={downloadPDF} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">PDF</button>
+              <button onClick={downloadXLSX} className="border border-[var(--color-accent-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-strong)] hover:text-white">XLSX</button>
               <button onClick={downloadJSON} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">JSON</button>
               <button onClick={downloadCSV} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Audit CSV</button>
               <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{exportMsg}</span>

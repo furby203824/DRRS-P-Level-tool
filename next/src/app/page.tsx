@@ -1,5 +1,6 @@
 import { ClassificationBanner } from "@/components/ClassificationBanner";
 import { Calculator } from "@/components/Calculator";
+import { MethodologyAccordion } from "@/components/MethodologyAccordion";
 
 export default function Home() {
   return (
@@ -21,6 +22,7 @@ export default function Home() {
         </header>
 
         <Calculator />
+        <MethodologyAccordion />
       </div>
 
       <div className="mt-auto">

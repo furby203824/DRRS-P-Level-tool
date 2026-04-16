@@ -170,7 +170,7 @@ export function MethodologyAccordion() {
 
   return (
     <section className="mb-8 border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-elevated)] pb-3">
         <h2 className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
           <BookOpen size={16} strokeWidth={1.5} className="text-[var(--color-accent)]" />
           Methodology

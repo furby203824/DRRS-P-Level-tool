@@ -391,7 +391,7 @@ export function Calculator() {
     <>
       {/* ---- UPLOAD CARD ---- */}
       <section className="mb-8 border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-6">
-        <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
+        <h2 className="border-b border-[var(--color-elevated)] pb-3 font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
           1. Load Data
         </h2>
         <p className="mt-1 text-sm text-[var(--color-body)]">
@@ -432,9 +432,9 @@ export function Calculator() {
 
         {/* File slots */}
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <FileSlot title="Alpha Roster" subtitle="One row per Marine / service member" onFile={(f) => handleFile("roster", f)} />
-          <FileSlot title="T/O Structure" subtitle="Authorized billets by BMOS + PayGrade" onFile={(f) => handleFile("structure", f)} />
-          <FileSlot title="Critical MOS List" subtitle="Mission-essential MOS for unit type" onFile={(f) => handleFile("critical", f)} />
+          <FileSlot title="Alpha Roster" subtitle="One row per Marine / service member" rowCount={roster?.length} onFile={(f) => handleFile("roster", f)} />
+          <FileSlot title="T/O Structure" subtitle="Authorized billets by BMOS + PayGrade" rowCount={structure?.length} onFile={(f) => handleFile("structure", f)} />
+          <FileSlot title="Critical MOS List" subtitle="Mission-essential MOS for unit type" rowCount={critical?.length} onFile={(f) => handleFile("critical", f)} />
         </div>
 
         {/* Actions */}
@@ -475,10 +475,23 @@ export function Calculator() {
         )}
       </section>
 
+      {/* ---- EMPTY STATE ---- */}
+      {!result && (
+        <div className="mb-8 flex flex-col items-center justify-center border border-dashed border-[var(--color-border)] py-16 text-center">
+          <CalcIcon size={48} strokeWidth={1.5} className="text-[var(--color-mute-3)]" />
+          <p className="mt-4 font-mono text-sm uppercase tracking-widest text-[var(--color-muted)]">
+            No calculation yet
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-mute-2)]">
+            Load the three CSVs above, then press Calculate P-Level
+          </p>
+        </div>
+      )}
+
       {/* ---- RESULTS ---- */}
       {result && (
         <section className="mb-8 border-2 border-[var(--color-accent-strong)] bg-[var(--color-surface)]/40 p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-elevated)] pb-3">
             <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
               2. Results
             </h2>

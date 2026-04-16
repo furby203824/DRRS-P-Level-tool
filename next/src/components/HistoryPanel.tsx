@@ -65,7 +65,7 @@ export function HistoryPanel({ refreshKey }: Props) {
 
   return (
     <section className="mb-8 border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-elevated)] pb-3">
         <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
           Calculation History
         </h2>

@@ -94,6 +94,30 @@
         <button id="reset" class="btn btn-ghost" type="button">Reset</button>
       </div>
 
+      <div id="mapping-panel" class="mapping-panel" hidden>
+        <h3>Status Mapping Review</h3>
+        <p class="muted small">
+          This roster does not have a <code>DRRSStatus</code> column. The tool
+          auto-mapped each <code>DutyStatus</code> value to a DRRS classification
+          using MCO 3000.13B defaults. Rows flagged for review are highlighted.
+          Adjust below, then proceed to Calculate.
+        </p>
+        <table class="data-table" id="mapping-table">
+          <thead>
+            <tr>
+              <th>DutyStatus</th>
+              <th class="num">Count</th>
+              <th>DRRS Status</th>
+              <th>Deployable</th>
+              <th>Review</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-table-body"></tbody>
+        </table>
+        <p class="muted small" id="mapping-review-count"></p>
+        <button id="mapping-accept" class="btn btn-primary" type="button">Accept Mapping &amp; Continue</button>
+      </div>
+
       <fieldset class="policy">
         <legend>Unit Policy</legend>
         <label class="policy-opt">
@@ -626,6 +650,7 @@
   </dialog>
 
   <script src="assets/js/parser.js"></script>
+  <script src="assets/js/mapper.js"></script>
   <script src="assets/js/calculator.js"></script>
   <script src="assets/js/app.js"></script>
 </body>

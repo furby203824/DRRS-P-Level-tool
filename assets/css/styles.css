@@ -804,6 +804,31 @@ html, body {
   margin-top: 8px;
 }
 
+/* Status mapping review panel */
+.mapping-panel {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: #fff8eb;
+}
+.mapping-panel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.mapping-panel .data-table { margin: 10px 0; }
+.mapping-panel select {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+.mapping-panel tr.needs-review { background: #fff3cd; }
+
 /* Print-only header (hidden on screen) */
 .print-header { display: none; }
 

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  const { parser, calculator } = window.PLevel;
+  const { parser, calculator, mapper } = window.PLevel;
 
   // Bundled sample CSV paths (filenames in repo root with spaces, URL-encoded).
   const SAMPLE_PATHS = {
@@ -580,11 +580,26 @@
     if (!file) return;
     setSlotStatus(kind, `Parsing ${file.name}...`);
     try {
-      const rows = await parser.parseCSV(file);
+      let rows = await parser.parseCSV(file);
+
+      // If this is a roster and it lacks DRRSStatus, run the mapper.
+      if (kind === "roster" && rows.length > 0 && mapper.needsMapping(Object.keys(rows[0]))) {
+        const asOfDate = parseAsOfDate($("#unit-asof").value) || new Date();
+        const mapped = mapper.classifyRoster(rows, asOfDate);
+        rows = mapped.classified;
+        showMappingPanel(rows, mapped.reviewCount);
+        // Add a warning so the operator knows mapping was auto-applied.
+        state.validation[kind] = state.validation[kind] || { errors: [], warnings: [] };
+        state.validation[kind].warnings.push(
+          `Alpha Roster: DRRSStatus column not found. Auto-mapped ${rows.length} rows from DutyStatus. ` +
+          `${mapped.reviewCount} row(s) flagged for S-1 review.`
+        );
+      }
+
       const validation = parser.validate(kind, rows);
       state.validation[kind] = {
-        errors: validation.errors || [],
-        warnings: validation.warnings || []
+        errors: (state.validation[kind] ? state.validation[kind].errors : []).concat(validation.errors || []),
+        warnings: (state.validation[kind] ? state.validation[kind].warnings : []).concat(validation.warnings || [])
       };
       if (validation.errors && validation.errors.length) {
         setSlotStatus(kind, validation.errors[0], false);
@@ -592,7 +607,7 @@
       } else {
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const warnCount = state.validation[kind].warnings.length;
         const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
         setSlotStatus(kind, `${file.name} -- ${normalized.length} rows${suffix}`, true);
       }
@@ -603,6 +618,76 @@
       setSlotStatus(kind, `Error: ${err.message}`, false);
       renderFromState();
     }
+    refreshCalculateButton();
+  }
+
+  // ---- Mapping review panel ---------------------------------------------
+  function showMappingPanel(classifiedRows, reviewCount) {
+    const panel = document.getElementById("mapping-panel");
+    const body = document.getElementById("mapping-table-body");
+    const countEl = document.getElementById("mapping-review-count");
+    if (!panel || !body) return;
+
+    const summary = mapper.mappingSummary(classifiedRows);
+    body.innerHTML = "";
+    for (const s of summary) {
+      const tr = document.createElement("tr");
+      if (s.needsReview) tr.classList.add("needs-review");
+      tr.innerHTML =
+        `<td>${escapeHtml(s.dutyStatus)}</td>` +
+        `<td class="num">${s.count}</td>` +
+        `<td><select data-ds="${escapeHtml(s.dutyStatus)}" data-field="drrs">` +
+          `<option value="ASSIGNED" ${s.drrsStatus === "ASSIGNED" ? "selected" : ""}>ASSIGNED</option>` +
+          `<option value="ATTACHED" ${s.drrsStatus === "ATTACHED" ? "selected" : ""}>ATTACHED</option>` +
+          `<option value="DETACHED" ${s.drrsStatus === "DETACHED" ? "selected" : ""}>DETACHED</option>` +
+          `<option value="IA" ${s.drrsStatus === "IA" ? "selected" : ""}>IA</option>` +
+          `<option value="JIA" ${s.drrsStatus === "JIA" ? "selected" : ""}>JIA</option>` +
+        `</select></td>` +
+        `<td><select data-ds="${escapeHtml(s.dutyStatus)}" data-field="deploy">` +
+          `<option value="Y" ${s.deployable === "Y" ? "selected" : ""}>Y (Deployable)</option>` +
+          `<option value="N" ${s.deployable === "N" ? "selected" : ""}>N (Non-Dep)</option>` +
+          `<option value="L" ${s.deployable === "L" ? "selected" : ""}>L (Limited)</option>` +
+        `</select></td>` +
+        `<td>${s.needsReview ? '<span class="tag tag-unfilled">REVIEW</span>' : '<span class="tag tag-filled">OK</span>'}</td>`;
+      body.appendChild(tr);
+    }
+    if (countEl) {
+      countEl.textContent = reviewCount > 0
+        ? `${reviewCount} row(s) flagged for S-1 review. Adjust the dropdowns above if needed.`
+        : "All rows mapped with high confidence. Verify and proceed.";
+    }
+    panel.hidden = false;
+  }
+
+  function hideMappingPanel() {
+    const panel = document.getElementById("mapping-panel");
+    if (panel) panel.hidden = true;
+  }
+
+  // When the S-1 clicks "Accept Mapping", apply any dropdown overrides
+  // back to the in-memory roster, then re-normalize.
+  function acceptMapping() {
+    if (!state.roster) { hideMappingPanel(); return; }
+    const selects = document.querySelectorAll("#mapping-table-body select");
+    const overrides = {};
+    selects.forEach(function (sel) {
+      const ds = sel.getAttribute("data-ds");
+      const field = sel.getAttribute("data-field");
+      if (!overrides[ds]) overrides[ds] = {};
+      if (field === "drrs") overrides[ds].DRRSStatus = sel.value;
+      if (field === "deploy") overrides[ds].DeployableFlag = sel.value;
+    });
+    // Re-apply overrides to the in-memory roster.
+    state.roster = state.roster.map(function (m) {
+      var ds = (m.DutyStatus || "").trim();
+      var ov = overrides[ds];
+      if (ov) {
+        if (ov.DRRSStatus) m.DRRSStatus = ov.DRRSStatus;
+        if (ov.DeployableFlag) m.DeployableFlag = ov.DeployableFlag;
+      }
+      return m;
+    });
+    hideMappingPanel();
     refreshCalculateButton();
   }
 
@@ -1106,6 +1191,7 @@
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
     renderFromState();
     refreshDetectedUnit();
+    hideMappingPanel();
     $("#results-section").hidden = true;
     const briefTa = $("#brief-textarea");
     if (briefTa) briefTa.value = "";
@@ -1190,6 +1276,9 @@
       });
     }
     if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
+
+    const mappingAcceptBtn = document.getElementById("mapping-accept");
+    if (mappingAcceptBtn) mappingAcceptBtn.addEventListener("click", acceptMapping);
 
     const histExport = document.getElementById("history-export");
     const histClear = document.getElementById("history-clear");

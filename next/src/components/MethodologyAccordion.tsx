@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BookOpen, ChevronRight, ChevronDown } from "lucide-react";
 
 interface Block {
   num: string;
@@ -172,7 +173,8 @@ export function MethodologyAccordion() {
   return (
     <section className="mb-8 border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
+        <h2 className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
+          <BookOpen size={16} strokeWidth={1.5} className="text-amber-600" />
           Methodology
         </h2>
         <div className="flex gap-2">
@@ -200,7 +202,11 @@ export function MethodologyAccordion() {
                 <span className={`text-sm font-semibold ${isOpen ? "text-[var(--color-accent)]" : "text-[var(--color-ink)]"} transition-colors`}>
                   {block.title}
                 </span>
-                <span className="ml-auto font-mono text-sm text-[var(--color-muted)]">{isOpen ? "\u2212" : "+"}</span>
+                <span className="ml-auto text-stone-500">
+                  {isOpen
+                    ? <ChevronDown size={16} strokeWidth={1.5} />
+                    : <ChevronRight size={16} strokeWidth={1.5} />}
+                </span>
               </button>
               {isOpen && (
                 <div className="pb-4 pl-[calc(theme(spacing.3)*2+theme(spacing.4)+1.5rem)]">

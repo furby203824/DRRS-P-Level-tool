@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import type { AuditRow, FillSource, MatchType } from "@/lib/plevel";
 
 function matchBadge(source: FillSource, matchType: MatchType): { label: string; cls: string } {
@@ -29,7 +30,10 @@ export function AuditTable({ audit }: Props) {
         className="flex w-full items-baseline gap-2 text-left"
         aria-expanded={open}
       >
-        <span className="font-mono text-xs text-[var(--color-muted)]">{open ? "\u2212" : "+"}</span>
+        {open
+          ? <ChevronDown size={14} strokeWidth={1.5} className="text-stone-500" />
+          : <ChevronRight size={14} strokeWidth={1.5} className="text-stone-500" />
+        }
         <span className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
           Per-Billet Audit Trail
         </span>

@@ -398,38 +398,6 @@ export function Calculator() {
           Upload the three CSVs, or load the bundled sample data to preview.
         </p>
 
-        {/* Unit profile (read-only UIC/Name from CSV + as-of date input) */}
-        <fieldset className="mt-4 border border-[var(--color-border)] p-4">
-          <legend className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)] px-2">
-            Unit Profile
-          </legend>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div>
-              <span className="block font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">UIC</span>
-              <span className={`mt-1 block border border-dashed border-[var(--color-border)] px-2 py-1.5 font-mono text-sm ${detectedUnit.uic ? "text-[var(--color-ink)]" : "italic text-[var(--color-mute-2)]"}`}>
-                {detectedUnit.uic || "From T/O Structure"}
-              </span>
-            </div>
-            <div>
-              <span className="block font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Unit Name</span>
-              <span className={`mt-1 block border border-dashed border-[var(--color-border)] px-2 py-1.5 font-mono text-sm ${detectedUnit.name ? "text-[var(--color-ink)]" : "italic text-[var(--color-mute-2)]"}`}>
-                {detectedUnit.name || "From T/O Structure"}
-              </span>
-            </div>
-            <div>
-              <label className="block font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">
-                As-Of Date
-              </label>
-              <input
-                type="date"
-                value={asOfDate}
-                onChange={(e) => setAsOfDate(e.target.value)}
-                className="mt-1 block w-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 font-mono text-sm text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
-              />
-            </div>
-          </div>
-        </fieldset>
-
         {/* File slots */}
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <FileSlot title="Alpha Roster" subtitle="One row per Marine / service member" rowCount={roster?.length} onFile={(f) => handleFile("roster", f)} />

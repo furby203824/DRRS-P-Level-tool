@@ -420,19 +420,19 @@ export function Calculator() {
 
         {/* Actions */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button onClick={loadSample} className="border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
+          <button onClick={loadSample} className="border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
             Load Sample Data
           </button>
-          <button onClick={loadRandom} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
-            <Shuffle size={12} strokeWidth={1.5} />
+          <button onClick={loadRandom} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
+            <Shuffle size={14} strokeWidth={1.5} />
             Random Unit
           </button>
-          <button onClick={doCalculate} disabled={!canCalculate} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)] disabled:cursor-not-allowed disabled:opacity-40">
+          <button onClick={doCalculate} disabled={!canCalculate} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-5 py-3 font-mono text-xs uppercase tracking-wider text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)] disabled:cursor-not-allowed disabled:opacity-40">
             <CalcIcon size={14} strokeWidth={1.5} />
             Calculate P-Level
           </button>
-          <button onClick={doReset} className="flex items-center gap-1 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-mute-2)] hover:text-[var(--color-ink)]">
-            <RotateCcw size={12} strokeWidth={1.5} />
+          <button onClick={doReset} className="flex items-center gap-1.5 px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-mute-2)] hover:text-[var(--color-ink)]">
+            <RotateCcw size={14} strokeWidth={1.5} />
             Reset
           </button>
           <label className="ml-auto flex items-center gap-2 font-mono text-xs text-[var(--color-muted)]">
@@ -463,7 +463,7 @@ export function Calculator() {
       {/* ---- EMPTY STATE ---- */}
       {!result && (
         <div className="mb-8 flex flex-col items-center justify-center border border-dashed border-[var(--color-border)] py-16 text-center">
-          <CalcIcon size={48} strokeWidth={1.5} className="text-[var(--color-mute-3)]" />
+          <CalcIcon size={48} strokeWidth={1.5} className="text-[var(--color-mute-2)]" />
           <p className="mt-4 font-mono text-sm uppercase tracking-widest text-[var(--color-muted)]">
             No calculation yet
           </p>
@@ -481,9 +481,9 @@ export function Calculator() {
               2. Results
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={copyBrief} className="flex items-center gap-1 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-2 py-1 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Copy size={12} strokeWidth={1.5} /> Copy Brief</button>
-              <button onClick={downloadPDF} className="flex items-center gap-1 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-2 py-1 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Download size={12} strokeWidth={1.5} /> PDF</button>
-              <button onClick={downloadCSV} className="flex items-center gap-1 border border-[var(--color-border)] bg-[var(--color-elevated)] px-2 py-1 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]"><Download size={12} strokeWidth={1.5} /> Audit CSV</button>
+              <button onClick={copyBrief} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-3 py-2.5 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Copy size={14} strokeWidth={1.5} /> Copy Brief</button>
+              <button onClick={downloadPDF} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-3 py-2.5 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Download size={14} strokeWidth={1.5} /> PDF</button>
+              <button onClick={downloadCSV} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2.5 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]"><Download size={14} strokeWidth={1.5} /> Audit CSV</button>
               <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{exportMsg}</span>
             </div>
           </div>
@@ -563,7 +563,7 @@ export function Calculator() {
                   const asOf = parseAsOfDate(asOfDate) ?? new Date();
                   setBriefText(buildReadinessBrief(result, unit, asOf, new Date()));
                 }}
-                className="px-2 py-0.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]"
               >
                 Regenerate
               </button>
@@ -631,10 +631,10 @@ export function Calculator() {
           <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-[var(--color-accent)]" />
           Encrypt export
         </label>
-        <button onClick={doExportProfile} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
-        <button onClick={() => profileImportRef.current?.click()} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
+        <button onClick={doExportProfile} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
+        <button onClick={() => profileImportRef.current?.click()} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
         <input ref={profileImportRef} type="file" accept=".json" hidden onChange={(e) => { if (e.target.files?.[0]) doImportProfile(e.target.files[0]); e.target.value = ""; }} />
-        <button onClick={doWipe} className="ml-auto px-2 py-1 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
+        <button onClick={doWipe} className="ml-auto px-3 py-2.5 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
       </div>
     </>
   );

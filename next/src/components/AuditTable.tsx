@@ -78,15 +78,15 @@ export function AuditTable({ audit }: Props) {
                   <td className="py-1 pr-2">
                     {row.Filled
                       ? `${row.FillerEDIPI} \u00b7 ${row.FillerName}`
-                      : <span className="text-[var(--color-mute-3)]">&mdash;</span>}
+                      : <span className="text-[var(--color-mute-2)]">&mdash;</span>}
                   </td>
                   <td className="py-1 pr-2">
-                    {row.Filled ? row.FillerPayGrade : <span className="text-[var(--color-mute-3)]">&mdash;</span>}
+                    {row.Filled ? row.FillerPayGrade : <span className="text-[var(--color-mute-2)]">&mdash;</span>}
                   </td>
                   <td className="py-1 pr-2">
                     {row.Filled
                       ? `${row.FillerBMOS} / ${row.FillerPMOS}`
-                      : <span className="text-[var(--color-mute-3)]">&mdash;</span>}
+                      : <span className="text-[var(--color-mute-2)]">&mdash;</span>}
                   </td>
                   <td className="py-1">
                     {row.Filled && row.FillSource && row.MatchType ? (
@@ -95,7 +95,7 @@ export function AuditTable({ audit }: Props) {
                         return <span className={`inline-block border px-1.5 py-px ${b.cls}`}>{b.label}</span>;
                       })()
                     ) : (
-                      <span className="text-[var(--color-mute-3)]">&mdash;</span>
+                      <span className="text-[var(--color-mute-2)]">&mdash;</span>
                     )}
                   </td>
                 </tr>

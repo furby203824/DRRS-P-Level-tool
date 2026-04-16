@@ -41,8 +41,8 @@ Tailwind arbitrary-value syntax: `bg-[var(--color-surface)]`.
 | `--color-ink-soft` | `#e7e5e4` | stone-200 | Body emphasis — data values |
 | `--color-body` | `#d6d3d1` | stone-300 | Body — descriptions, secondary button text |
 | `--color-muted` | `#a8a29e` | stone-400 | Labels — metric labels, subtitles |
-| `--color-mute-2` | `#78716c` | stone-500 | Muted — tiny labels, footers, ghost text |
-| `--color-mute-3` | `#57534e` | stone-600 | Whisper — separators, inactive states |
+| `--color-mute-2` | `#8a8480` | stone-500 adj. | Muted — tiny labels, footers, ghost text (5.36:1 on stone-950) |
+| `--color-mute-3` | `#57534e` | stone-600 | Whisper — separators, inactive states only (not for text) |
 
 ### Brass accent layer (the "command color")
 

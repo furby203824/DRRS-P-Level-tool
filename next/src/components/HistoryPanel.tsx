@@ -63,11 +63,13 @@ export function HistoryPanel({ refreshKey }: Props) {
     flash("History cleared");
   }, []);
 
+  if (entries.length === 0) return null;
+
   return (
     <section className="mb-8 border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-elevated)] pb-3">
         <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
-          Calculation History
+          Calculation History <span className="text-[var(--color-muted)]">({entries.length})</span>
         </h2>
         <div className="flex items-center gap-2">
           <button onClick={doExport} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">
@@ -83,49 +85,45 @@ export function HistoryPanel({ refreshKey }: Props) {
         Last 30 aggregate snapshots. No EDIPIs — those live only in per-run exports.
       </p>
 
-      {entries.length === 0 ? (
-        <p className="mt-3 text-xs italic text-[var(--color-mute-2)]">No history yet. Run a calculation to populate.</p>
-      ) : (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left font-mono text-xs">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)]">
-                <th className="py-1.5 pr-3">As-Of</th>
-                <th className="py-1.5 pr-3">UIC</th>
-                <th className="py-1.5 pr-3">Unit</th>
-                <th className="py-1.5 pr-3">P-Level</th>
-                <th className="py-1.5 pr-3 text-right">PS %</th>
-                <th className="py-1.5 pr-3 text-right">CM %</th>
-                <th className="py-1.5 pr-3">Driver</th>
-                <th className="py-1.5">Saved (UTC)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e, i) => {
-                const asOfLabel = formatDateDDMMMYY(parseAsOfDate(e.asOfDate) ?? new Date(e.savedAt));
-                const savedLabel = e.savedAt ? new Date(e.savedAt).toISOString().slice(0, 16).replace("T", " ") : "";
-                const band = e.result.finalBand;
-                return (
-                  <tr key={i} className={`border-b border-[var(--color-elevated)] border-l-3 ${BAND_BORDER[band] ?? ""} text-[var(--color-ink-soft)]`}>
-                    <td className="py-1 pr-3">{asOfLabel}</td>
-                    <td className="py-1 pr-3">{e.unit.uic || "NOUIC"}</td>
-                    <td className="py-1 pr-3 text-[var(--color-body)]">{e.unit.name}</td>
-                    <td className="py-1 pr-3">
-                      <span className={`inline-block px-1.5 py-px text-white ${BAND_BG[band] ?? "bg-[var(--color-mute-3)]"}`}>
-                        {e.result.pLevel}
-                      </span>
-                    </td>
-                    <td className="py-1 pr-3 text-right">{e.result.personnel.pct.toFixed(1)}%</td>
-                    <td className="py-1 pr-3 text-right">{e.result.critical.pct.toFixed(1)}%</td>
-                    <td className="py-1 pr-3 text-[var(--color-muted)]">{e.result.driver}</td>
-                    <td className="py-1 text-[var(--color-mute-2)]">{savedLabel}Z</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-left font-mono text-xs">
+          <thead>
+            <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)]">
+              <th className="py-1.5 pr-3">As-Of</th>
+              <th className="py-1.5 pr-3">UIC</th>
+              <th className="py-1.5 pr-3">Unit</th>
+              <th className="py-1.5 pr-3">P-Level</th>
+              <th className="py-1.5 pr-3 text-right">PS %</th>
+              <th className="py-1.5 pr-3 text-right">CM %</th>
+              <th className="py-1.5 pr-3">Driver</th>
+              <th className="py-1.5">Saved (UTC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e, i) => {
+              const asOfLabel = formatDateDDMMMYY(parseAsOfDate(e.asOfDate) ?? new Date(e.savedAt));
+              const savedLabel = e.savedAt ? new Date(e.savedAt).toISOString().slice(0, 16).replace("T", " ") : "";
+              const band = e.result.finalBand;
+              return (
+                <tr key={i} className={`border-b border-[var(--color-elevated)] border-l-3 ${BAND_BORDER[band] ?? ""} text-[var(--color-ink-soft)] hover:bg-[var(--color-surface)]`}>
+                  <td className="py-1 pr-3">{asOfLabel}</td>
+                  <td className="py-1 pr-3">{e.unit.uic || "NOUIC"}</td>
+                  <td className="py-1 pr-3 text-[var(--color-body)]">{e.unit.name}</td>
+                  <td className="py-1 pr-3">
+                    <span className={`inline-block px-1.5 py-px text-white ${BAND_BG[band] ?? "bg-[var(--color-mute-3)]"}`}>
+                      {e.result.pLevel}
+                    </span>
+                  </td>
+                  <td className="py-1 pr-3 text-right">{e.result.personnel.pct.toFixed(1)}%</td>
+                  <td className="py-1 pr-3 text-right">{e.result.critical.pct.toFixed(1)}%</td>
+                  <td className="py-1 pr-3 text-[var(--color-muted)]">{e.result.driver}</td>
+                  <td className="py-1 text-[var(--color-mute-2)]">{savedLabel}Z</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

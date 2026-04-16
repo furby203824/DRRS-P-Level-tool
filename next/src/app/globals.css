@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/**
+ * Design tokens per DESIGN_SYSTEM.md (tactical brutalist palette).
+ *
+ * The live static site uses a navy/gold scheme; this Next.js port is
+ * the home for the amber/stone palette described in the design doc.
+ * Change values here; a future MARFORPAC vs MARFORLANT theme swap is
+ * a one-line edit to --color-accent.
+ */
+@theme {
+  /* Surfaces */
+  --color-bg: #0c0a09;           /* stone-950 */
+  --color-surface: #1c1917;      /* stone-900 */
+  --color-elevated: #292524;     /* stone-800 */
+  --color-border: #44403c;       /* stone-700 */
+
+  /* Text hierarchy */
+  --color-ink: #f5f5f4;          /* stone-100 */
+  --color-ink-soft: #e7e5e4;     /* stone-200 */
+  --color-body: #d6d3d1;         /* stone-300 */
+  --color-muted: #a8a29e;        /* stone-400 */
+  --color-mute-2: #78716c;       /* stone-500 */
+  --color-mute-3: #57534e;       /* stone-600 */
+
+  /* Brass accent (command color) */
+  --color-accent: #d97706;       /* amber-600 */
+  --color-accent-strong: #b45309;/* amber-700 */
+  --color-accent-hi: #fbbf24;    /* amber-400 */
+  --color-accent-head: #f59e0b;  /* amber-500 */
+
+  /* Readiness band semantics (mil-spec ordering) */
+  --color-p1: #15803d;           /* emerald-700 */
+  --color-p2: #ca8a04;           /* yellow-600 */
+  --color-p3: #ea580c;           /* orange-600 */
+  --color-p4: #b91c1c;           /* red-700 */
+
+  /* Classification banner */
+  --color-classification: #7f1d1d; /* red-900 */
+  --color-classification-edge: #dc2626; /* red-600 */
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo,
+    Consolas, "Courier New", monospace;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

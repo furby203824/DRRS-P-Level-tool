@@ -174,6 +174,21 @@ html, body {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
+/* Read-only derived display (UIC, Unit Name populated from CSV) */
+.unit-display {
+  display: block;
+  padding: 7px 9px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  min-height: 34px;
+}
+.unit-display[data-empty="true"] {
+  color: var(--muted);
+  font-style: italic;
+}
 .unit-actions {
   display: flex;
   justify-content: space-between;

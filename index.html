@@ -35,24 +35,24 @@
       <fieldset class="unit-profile">
         <legend>Unit Profile</legend>
         <div class="unit-grid">
-          <label class="unit-field">
+          <div class="unit-field unit-field-readonly">
             <span class="unit-label">UIC</span>
-            <input type="text" id="unit-uic" maxlength="12" placeholder="e.g. M00378" autocomplete="off" spellcheck="false" />
-          </label>
-          <label class="unit-field">
+            <span class="unit-display" id="unit-uic" aria-live="polite" data-empty="true">From T/O Structure</span>
+          </div>
+          <div class="unit-field unit-field-readonly">
             <span class="unit-label">Unit Name</span>
-            <input type="text" id="unit-name" maxlength="64" placeholder="e.g. CLB-3 H&amp;S Co" autocomplete="off" />
-          </label>
+            <span class="unit-display" id="unit-name" aria-live="polite" data-empty="true">From T/O Structure</span>
+          </div>
           <label class="unit-field">
             <span class="unit-label">As-Of Date</span>
             <input type="date" id="unit-asof" />
           </label>
         </div>
         <div class="unit-actions">
-          <p class="policy-hint">Auto-saved to your browser. Stamped onto the readiness brief, JSON export, and audit CSV filename.</p>
+          <p class="policy-hint">UIC and Unit Name are read from the T/O Structure CSV when it loads. As-Of Date is operator-supplied and auto-saved to your browser. All three stamp onto the readiness brief, JSON export, and audit CSV filename.</p>
           <div class="unit-action-row">
             <button id="profile-export" type="button" class="btn btn-ghost small"
-                    title="Download the unit profile as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
+                    title="Download the As-Of date and policy settings as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
             <button id="profile-import" type="button" class="btn btn-ghost small"
                     title="Load a unit profile JSON file saved earlier">Import Profile</button>
             <input type="file" id="profile-import-input" accept=".json" hidden />

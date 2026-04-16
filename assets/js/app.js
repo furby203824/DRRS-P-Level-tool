@@ -34,7 +34,8 @@
     structure: null,
     critical: null,
     lastResult: null,
-    validation: { roster: null, structure: null, critical: null } // {errors, warnings}
+    validation: { roster: null, structure: null, critical: null }, // {errors, warnings}
+    detectedUnit: { uic: "", name: "" }
   };
 
   // ---- DOM helpers ------------------------------------------------------
@@ -43,10 +44,38 @@
 
   function readUnitProfile() {
     return {
-      uic: ($("#unit-uic").value || "").trim().toUpperCase(),
-      name: ($("#unit-name").value || "").trim(),
+      uic: (state.detectedUnit.uic || "").toUpperCase(),
+      name: state.detectedUnit.name || "",
       asOf: ($("#unit-asof").value || "").trim() // YYYY-MM-DD or ""
     };
+  }
+
+  // Update the read-only UIC / Unit Name display from the loaded CSVs.
+  // T/O Structure is the canonical source for unit identity; fall back
+  // to the roster's Unit / UnitName if structure isn't loaded yet.
+  function refreshDetectedUnit() {
+    let uic = "";
+    let name = "";
+    const source =
+      (Array.isArray(state.structure) && state.structure[0]) ||
+      (Array.isArray(state.roster) && state.roster[0]) ||
+      null;
+    if (source) {
+      uic = (source.Unit || "").trim();
+      name = (source.UnitName || "").trim();
+    }
+    state.detectedUnit = { uic, name };
+
+    const uicEl = document.getElementById("unit-uic");
+    const nameEl = document.getElementById("unit-name");
+    if (uicEl) {
+      uicEl.textContent = uic || "From T/O Structure";
+      uicEl.dataset.empty = uic ? "false" : "true";
+    }
+    if (nameEl) {
+      nameEl.textContent = name || "From T/O Structure";
+      nameEl.dataset.empty = name ? "false" : "true";
+    }
   }
 
   function todayISODate() {
@@ -68,10 +97,12 @@
   }
 
   // ---- Unit Profile persistence ---------------------------------------
+  // UIC and Unit Name are derived from the loaded T/O Structure and are
+  // not persisted here -- they rehydrate from the CSV on every session.
+  // Persisted profile carries only operator-supplied values (As-Of date,
+  // unit policy).
   function currentProfileObject() {
     return {
-      uic: ($("#unit-uic") && $("#unit-uic").value) || "",
-      name: ($("#unit-name") && $("#unit-name").value) || "",
       asOf: ($("#unit-asof") && $("#unit-asof").value) || "",
       policy: {
         countLimitedAsNonDeployable:
@@ -82,12 +113,11 @@
 
   function applyProfileObject(p) {
     if (!p || typeof p !== "object") return;
-    if (typeof p.uic === "string" && $("#unit-uic")) $("#unit-uic").value = p.uic;
-    if (typeof p.name === "string" && $("#unit-name")) $("#unit-name").value = p.name;
     if (typeof p.asOf === "string" && $("#unit-asof")) $("#unit-asof").value = p.asOf;
     if (p.policy && typeof p.policy.countLimitedAsNonDeployable === "boolean" && $("#policy-limited")) {
       $("#policy-limited").checked = p.policy.countLimitedAsNonDeployable;
     }
+    // v0 profiles carried uic/name fields; safely ignored here.
   }
 
   function saveProfileToStorage() {
@@ -111,7 +141,9 @@
     profile.exportedAt = new Date().toISOString();
     profile.schema = "drrs-plevel-unit-profile.v1";
     const content = JSON.stringify(profile, null, 2);
-    const uicPart = sanitizeForFilename(profile.uic);
+    // Filename reflects the detected UIC if a CSV is loaded; falls back
+    // to NOUIC so the operator still gets a working download.
+    const uicPart = sanitizeForFilename(state.detectedUnit.uic);
     triggerDownload(`unit-profile-${uicPart}.json`, "application/json", content);
     setProfileStatus("Profile exported");
   }
@@ -143,9 +175,8 @@
     try {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
     } catch (_) { /* */ }
-    // Reset the unit profile fields and in-memory state.
-    if ($("#unit-uic")) $("#unit-uic").value = "";
-    if ($("#unit-name")) $("#unit-name").value = "";
+    // Reset operator-supplied fields and in-memory state. UIC / Unit
+    // Name are derived from the CSV and cleared by reset() below.
     if ($("#unit-asof")) $("#unit-asof").value = todayISODate();
     if ($("#policy-limited")) $("#policy-limited").checked = true;
     reset();
@@ -252,6 +283,7 @@
         setSlotStatus(kind, `${file.name} -- ${normalized.length} rows${suffix}`, true);
       }
       renderFromState();
+      refreshDetectedUnit();
     } catch (err) {
       state.validation[kind] = { errors: [`${parser.SCHEMA[kind].label}: ${err.message}`], warnings: [] };
       setSlotStatus(kind, `Error: ${err.message}`, false);
@@ -269,13 +301,8 @@
 
   // ---- Sample data loader ----------------------------------------------
   async function loadSample() {
-    // Populate the Unit Profile with the sample unit identity so the
-    // brief/JSON/CSV exports don't read as [UIC NOT SET] on a demo run.
-    const uicEl = $("#unit-uic");
-    const nameEl = $("#unit-name");
-    if (uicEl && !uicEl.value) uicEl.value = "M00378";
-    if (nameEl && !nameEl.value) nameEl.value = "CLB-3 H&S Co (sample)";
-
+    // UIC / Unit Name come from the T/O Structure CSV itself on load,
+    // so no form-field pre-population is needed here.
     for (const kind of Object.keys(SAMPLE_PATHS)) {
       try {
         setSlotStatus(kind, "Loading sample...");
@@ -305,6 +332,7 @@
       }
     }
     renderFromState();
+    refreshDetectedUnit();
     refreshCalculateButton();
   }
 
@@ -754,9 +782,11 @@
     state.roster = state.structure = state.critical = null;
     state.lastResult = null;
     state.validation = { roster: null, structure: null, critical: null };
+    state.detectedUnit = { uic: "", name: "" };
     $$('input[type="file"]').forEach((el) => (el.value = ""));
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
     renderFromState();
+    refreshDetectedUnit();
     $("#results-section").hidden = true;
     setExportStatus("");
     refreshCalculateButton();
@@ -815,12 +845,12 @@
     const asofInput = $("#unit-asof");
     if (asofInput && !asofInput.value) asofInput.value = todayISODate();
     loadProfileFromStorage();
+    refreshDetectedUnit();
 
-    // Auto-save unit profile fields on change.
-    ["unit-uic", "unit-name", "unit-asof"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener("input", saveProfileToStorage);
-    });
+    // Auto-save operator-supplied profile fields on change. UIC and
+    // Unit Name are derived from the loaded CSV and not persisted.
+    const asofEl = document.getElementById("unit-asof");
+    if (asofEl) asofEl.addEventListener("input", saveProfileToStorage);
     const policyEl = document.getElementById("policy-limited");
     if (policyEl) policyEl.addEventListener("change", saveProfileToStorage);
 

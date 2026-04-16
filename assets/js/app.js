@@ -112,6 +112,79 @@
     return (s || "").replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 16) || "NOUIC";
   }
 
+  // ---- Strength breakdown (MO/ME/NC/NE) --------------------------------
+  function computeStrengthBreakdown() {
+    var panel = document.getElementById("strength-breakdown");
+    if (!panel) return;
+
+    // T/O Authorized — derive from PayGrade (O/W = Officer, E = Enlisted).
+    // T/O Structure doesn't carry Service so we can't split USMC/USN there.
+    var authMO = 0, authME = 0, authNC = 0, authNE = 0;
+    if (state.structure) {
+      for (var i = 0; i < state.structure.length; i++) {
+        var s = state.structure[i];
+        var pg = (s.PayGrade || "").toUpperCase();
+        var auth = s.Authorized || 0;
+        if (pg.charAt(0) === "O" || pg.charAt(0) === "W") {
+          authMO += auth; // Can't distinguish USMC vs USN from T/O alone
+        } else {
+          authME += auth;
+        }
+      }
+    }
+    var authTotal = authMO + authME + authNC + authNE;
+
+    // Assigned Strength — derive from roster Service + PayGrade.
+    // Only count ASSIGNED + ATTACHED Marines (active strength).
+    var asgMO = 0, asgME = 0, asgNC = 0, asgNE = 0;
+    if (state.roster) {
+      for (var j = 0; j < state.roster.length; j++) {
+        var m = state.roster[j];
+        var status = (m.DRRSStatus || "").toUpperCase();
+        if (status !== "ASSIGNED" && status !== "ATTACHED") continue;
+        var svc = (m.Service || "").toUpperCase();
+        var grade = (m.PayGrade || "").toUpperCase();
+        var isOfficer = grade.charAt(0) === "O" || grade.charAt(0) === "W";
+        var isNavy = svc === "USN" || svc === "NAVY";
+        if (isNavy) {
+          if (isOfficer) asgNC++; else asgNE++;
+        } else {
+          if (isOfficer) asgMO++; else asgME++;
+        }
+      }
+    }
+    var asgTotal = asgMO + asgME + asgNC + asgNE;
+
+    if (!state.structure && !state.roster) { panel.hidden = true; return; }
+    panel.hidden = false;
+
+    function setCell(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+    function fillPct(auth, asg) {
+      return auth > 0 ? ((asg / auth) * 100).toFixed(0) + "%" : "--";
+    }
+
+    setCell("str-auth-mo", authMO);
+    setCell("str-auth-me", authME);
+    setCell("str-auth-nc", authNC || "--");
+    setCell("str-auth-ne", authNE || "--");
+    setCell("str-auth-total", authTotal);
+
+    setCell("str-asg-mo", asgMO);
+    setCell("str-asg-me", asgME);
+    setCell("str-asg-nc", asgNC);
+    setCell("str-asg-ne", asgNE);
+    setCell("str-asg-total", asgTotal);
+
+    setCell("str-fill-mo", fillPct(authMO, asgMO));
+    setCell("str-fill-me", fillPct(authME, asgME));
+    setCell("str-fill-nc", authNC > 0 ? fillPct(authNC, asgNC) : "--");
+    setCell("str-fill-ne", authNE > 0 ? fillPct(authNE, asgNE) : "--");
+    setCell("str-fill-total", fillPct(authTotal, asgTotal));
+  }
+
   // ---- Unit Profile persistence ---------------------------------------
   // UIC and Unit Name are derived from the loaded T/O Structure and are
   // not persisted here -- they rehydrate from the CSV on every session.
@@ -743,6 +816,7 @@
       }
       renderFromState();
       refreshDetectedUnit();
+    computeStrengthBreakdown();
     } catch (err) {
       state.validation[kind] = { errors: [`${parser.SCHEMA[kind].label}: ${err.message}`], warnings: [] };
       setSlotStatus(kind, `Error: ${err.message}`, false);
@@ -863,6 +937,7 @@
     }
     renderFromState();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
     refreshCalculateButton();
   }
 
@@ -1336,6 +1411,7 @@
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
     renderFromState();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
     hideMappingPanel();
     $("#results-section").hidden = true;
     const briefTa = $("#brief-textarea");
@@ -1399,6 +1475,7 @@
     if (asofInput && !asofInput.value) asofInput.value = todayISODate();
     loadProfileFromStorage();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
 
     // Auto-save operator-supplied profile fields on change. UIC and
     // Unit Name are derived from the loaded CSV and not persisted.

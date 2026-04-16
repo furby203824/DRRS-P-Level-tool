@@ -50,6 +50,52 @@
             <input type="date" id="unit-asof" />
           </label>
         </div>
+
+        <div id="strength-breakdown" class="strength-breakdown" hidden>
+          <table class="data-table strength-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="num">MO<br><span class="unit-label">Marine Off</span></th>
+                <th class="num">ME<br><span class="unit-label">Marine Enl</span></th>
+                <th class="num">NC<br><span class="unit-label">Navy Off</span></th>
+                <th class="num">NE<br><span class="unit-label">Navy Enl</span></th>
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>T/O Authorized</td>
+                <td class="num" id="str-auth-mo">--</td>
+                <td class="num" id="str-auth-me">--</td>
+                <td class="num" id="str-auth-nc">--</td>
+                <td class="num" id="str-auth-ne">--</td>
+                <td class="num" id="str-auth-total">--</td>
+              </tr>
+              <tr>
+                <td>Assigned Strength</td>
+                <td class="num" id="str-asg-mo">--</td>
+                <td class="num" id="str-asg-me">--</td>
+                <td class="num" id="str-asg-nc">--</td>
+                <td class="num" id="str-asg-ne">--</td>
+                <td class="num" id="str-asg-total">--</td>
+              </tr>
+              <tr class="muted">
+                <td>Fill %</td>
+                <td class="num" id="str-fill-mo">--</td>
+                <td class="num" id="str-fill-me">--</td>
+                <td class="num" id="str-fill-nc">--</td>
+                <td class="num" id="str-fill-ne">--</td>
+                <td class="num" id="str-fill-total">--</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted small">
+            MO/ME derived from T/O PayGrade (O/W = Officer, E = Enlisted).
+            NC/NE split requires Service column in roster (USN vs USMC).
+            T/O Structure does not carry Service, so Navy billets show in the Officer/Enlisted totals.
+          </p>
+        </div>
         <div class="unit-actions">
           <p class="policy-hint">UIC and Unit Name are read from the T/O Structure CSV when it loads. As-Of Date is operator-supplied and auto-saved to your browser. All three stamp onto the readiness brief, JSON export, and audit CSV filename.</p>
           <div class="unit-action-row">

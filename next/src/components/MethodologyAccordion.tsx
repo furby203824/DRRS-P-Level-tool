@@ -143,6 +143,44 @@ const blocks: Block[] = [
     ),
   },
   {
+    num: "08", title: "System Architecture & Compliance Posture",
+    content: (
+      <>
+        <p className="text-xs text-[var(--color-body)]">
+          This tool is a <strong>static client-side application</strong>. All CSV parsing and calculation execute in the user&apos;s browser. No personnel data leaves the machine. This architecture determines which security controls apply and which are not applicable.
+        </p>
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Architecture</div>
+        <table className="mt-1 w-full text-xs"><tbody>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Platform</td><td className="text-[var(--color-body)]">Static web app — no backend server, no database, no API endpoints</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Hosting</td><td className="text-[var(--color-body)]">GitHub Pages or any static HTTP server (ADR-1)</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Persistence</td><td className="text-[var(--color-body)]">Browser localStorage only (operator preferences). No PII/CUI persisted.</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Encryption</td><td className="text-[var(--color-body)]">Optional AES-256-GCM + PBKDF2-SHA256 for exported profile JSON (Web Crypto API)</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Authentication</td><td className="text-[var(--color-body)]">None — access control inherited from hosting environment</td></tr>
+          <tr><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">DoD Network</td><td className="text-[var(--color-body)]">None — no connection to NIPRNET, SIPRNET, MCEN, or any DoD IS</td></tr>
+        </tbody></table>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">NIST SP 800-171r3 Control Applicability</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">Controls marked N/A are not applicable due to the static client-side architecture. They become required if the system transitions to a server-backed deployment.</p>
+        <table className="mt-1 w-full text-xs"><tbody>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Row Level Security / multi-tenant isolation</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">No database</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Multi-Factor Authentication (03.05.02)</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">No auth system</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Session management (03.05.03)</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">Stateless static page</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Credential storage</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">No credentials</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">TLS 1.2+ in transit (03.13.08)</td><td className="font-bold text-[var(--color-p1)]">Inherited</td><td className="text-[var(--color-mute-2)]">GitHub Pages HTTPS</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Encryption at rest (03.13.16)</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">No server-side data at rest</td></tr>
+          <tr><td className="py-1 pr-4 text-[var(--color-body)]">Audit log retention</td><td className="font-bold text-[var(--color-muted)]">N/A</td><td className="text-[var(--color-mute-2)]">No server-side logs</td></tr>
+        </tbody></table>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Classification</div>
+        <table className="mt-1 w-full text-xs"><tbody>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">System Type</td><td className="text-[var(--color-body)]">Proof of Concept (PoC) per DoDI 8500.01</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Data Classification</td><td className="text-[var(--color-body)]">UNCLASSIFIED — synthetic data only, zero CUI/PII with sample data</td></tr>
+          <tr><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">ATO Status</td><td className="text-[var(--color-body)]">Not required for PoC with synthetic data. Required before any operational use with real data.</td></tr>
+        </tbody></table>
+      </>
+    ),
+  },
+  {
     num: "\u00A7", title: "Source Documents",
     content: (
       <ul className="ml-4 list-disc space-y-1 text-xs text-[var(--color-body)]">

@@ -12,6 +12,23 @@
     critical: "critical%20mos%20example.csv"
   };
 
+  // DRRS Remarks block character limit. Conservative default; S-3 should
+  // verify against the DRRS-MC field definition for the deployed version.
+  // Seen references to both 2000 and 4000; starting at 2000 and flagging
+  // when over so the S-1 sees it before pasting.
+  const DRRS_REMARKS_LIMIT = 2000;
+
+  // LocalStorage key for the persisted Unit Profile. Versioned so a
+  // future schema change can migrate or discard old data cleanly.
+  const PROFILE_STORAGE_KEY = "drrs-plevel.unitProfile.v1";
+
+  // Placeholder text the S-1 overwrites in the brief textarea before copy.
+  const ACTIONS_PLACEHOLDER =
+    "[S-1 to fill: manning requests submitted, recruiting pipeline engagement, " +
+    "MOS school quotas requested, critical billet swaps proposed.]";
+  const RESULTS_PLACEHOLDER =
+    "[S-1 to fill: expected P-Level recovery date, dependencies, risk to mission.]";
+
   const state = {
     roster: null,
     structure: null,
@@ -48,6 +65,101 @@
 
   function sanitizeForFilename(s) {
     return (s || "").replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 16) || "NOUIC";
+  }
+
+  // ---- Unit Profile persistence ---------------------------------------
+  function currentProfileObject() {
+    return {
+      uic: ($("#unit-uic") && $("#unit-uic").value) || "",
+      name: ($("#unit-name") && $("#unit-name").value) || "",
+      asOf: ($("#unit-asof") && $("#unit-asof").value) || "",
+      policy: {
+        countLimitedAsNonDeployable:
+          $("#policy-limited") ? $("#policy-limited").checked : true
+      }
+    };
+  }
+
+  function applyProfileObject(p) {
+    if (!p || typeof p !== "object") return;
+    if (typeof p.uic === "string" && $("#unit-uic")) $("#unit-uic").value = p.uic;
+    if (typeof p.name === "string" && $("#unit-name")) $("#unit-name").value = p.name;
+    if (typeof p.asOf === "string" && $("#unit-asof")) $("#unit-asof").value = p.asOf;
+    if (p.policy && typeof p.policy.countLimitedAsNonDeployable === "boolean" && $("#policy-limited")) {
+      $("#policy-limited").checked = p.policy.countLimitedAsNonDeployable;
+    }
+  }
+
+  function saveProfileToStorage() {
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(currentProfileObject()));
+    } catch (_) { /* quota or privacy mode: silently skip */ }
+  }
+
+  function loadProfileFromStorage() {
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (!raw) return false;
+      const p = JSON.parse(raw);
+      applyProfileObject(p);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function exportProfileToFile() {
+    const profile = currentProfileObject();
+    profile.exportedAt = new Date().toISOString();
+    profile.schema = "drrs-plevel-unit-profile.v1";
+    const content = JSON.stringify(profile, null, 2);
+    const uicPart = sanitizeForFilename(profile.uic);
+    triggerDownload(`unit-profile-${uicPart}.json`, "application/json", content);
+    setProfileStatus("Profile exported");
+  }
+
+  function importProfileFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        applyProfileObject(data);
+        saveProfileToStorage();
+        setProfileStatus(`Profile loaded from ${file.name}`);
+      } catch (err) {
+        setProfileStatus("Import failed: " + err.message);
+      }
+    };
+    reader.onerror = () => setProfileStatus("Could not read " + file.name);
+    reader.readAsText(file);
+  }
+
+  function wipeLocalData() {
+    const ok = window.confirm(
+      "Wipe locally stored unit profile and any other cached data for this tool?\n\n" +
+      "This clears the browser-side copy only (data never left your machine). " +
+      "CSV files you've loaded this session will also be cleared."
+    );
+    if (!ok) return;
+    try {
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
+    } catch (_) { /* */ }
+    // Reset the unit profile fields and in-memory state.
+    if ($("#unit-uic")) $("#unit-uic").value = "";
+    if ($("#unit-name")) $("#unit-name").value = "";
+    if ($("#unit-asof")) $("#unit-asof").value = todayISODate();
+    if ($("#policy-limited")) $("#policy-limited").checked = true;
+    reset();
+    setProfileStatus("Local data wiped");
+  }
+
+  function setProfileStatus(msg) {
+    const el = document.getElementById("profile-status");
+    if (!el) return;
+    el.textContent = msg;
+    if (msg) {
+      clearTimeout(setProfileStatus._t);
+      setProfileStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
+    }
   }
 
   function setSlotStatus(kind, status, ok) {
@@ -268,9 +380,23 @@
 
     state.lastResult = result;
     setExportStatus("");
+    renderPrintHeader();
+    renderBriefPreview(result);
 
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderPrintHeader() {
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    const unitLabel = unit.uic
+      ? unit.name ? `${unit.uic} — ${unit.name}` : unit.uic
+      : "[UIC NOT SET]";
+    $("#print-unit").textContent = unitLabel;
+    $("#print-asof").textContent = formatDateDDMMMYY(asOf);
+    $("#print-now").textContent = formatDateDDMMMYY(new Date()) + " " +
+      new Date().toTimeString().slice(0, 5);
   }
 
   // ---- Export ----------------------------------------------------------
@@ -282,37 +408,90 @@
     return pad2(d.getDate()) + months[d.getMonth()] + yy;
   }
 
-  function buildReadinessBrief(result, unit, asOfDate, computedAt) {
+  // Suggest a DRRS reason code based on which band is binding. Returns
+  // null at P-1 (no reason code needed). The S-1 can override in the
+  // editable brief before copying.
+  function suggestReasonCode(result) {
+    const finalBand = result.band.finalBand;
+    if (finalBand === 1) return null;
+    if (result.band.cBand > result.band.pBand) return "S-MOS-QUAL";
+    if (result.band.pBand > result.band.cBand) return "S-MANPOWER";
+    // Aligned at same sub-P-1 band: default to personnel.
+    return "S-MANPOWER";
+  }
+
+  function buildReadinessBrief(result, unit, asOfDate, computedAt, opts) {
+    opts = opts || {};
     const p = result.personnel;
     const c = result.critical;
     const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
     const asOfStr = formatDateDDMMMYY(asOfDate);
-    const policyLine = result.options.countLimitedAsNonDeployable
-      ? "POLICY: LIMITED DUTY (DLC=L) COUNTED AS NON-DEPLOYABLE"
-      : "POLICY: LIMITED DUTY (DLC=L) COUNTED AS EFFECTIVE";
-    const driver = (result.band.driver || "").toUpperCase();
     const unitLine = unit.name
       ? `UNIT: ${unit.uic || "[UIC NOT SET]"} - ${unit.name.toUpperCase()}`
       : `UNIT: ${unit.uic || "[UIC NOT SET]"}`;
+
+    const pBand = result.band.pBand;
+    const cBand = result.band.cBand;
+    const driverShort =
+      pBand > cBand ? "personnel strength"
+      : cBand > pBand ? "critical MOS fill"
+      : "personnel and critical MOS aligned";
+    const bluf =
+      `BLUF: ${result.pLevel} at ${p.pct.toFixed(1)}% personnel strength ` +
+      `(${p.effective}/${p.authorized}); critical MOS fill ` +
+      `${c.pct.toFixed(1)}% (${c.filled}/${c.authorized} billets). ` +
+      `Binding: ${driverShort}.`;
+
+    const reasonCode = suggestReasonCode(result);
+    const reasonLine = reasonCode
+      ? `REASON CODE (SUGGESTED): ${reasonCode}`
+      : `REASON CODE: N/A (P-1)`;
+
+    const policyLine = result.options.countLimitedAsNonDeployable
+      ? "POLICY: Limited Duty (DLC=L) counted as non-deployable."
+      : "POLICY: Limited Duty (DLC=L) counted as effective.";
+
+    const actions = opts.actions || ACTIONS_PLACEHOLDER;
+    const results = opts.results || RESULTS_PLACEHOLDER;
 
     return [
       "DRRS PERSONNEL READINESS",
       unitLine,
       `AS OF: ${asOfStr}`,
-      `P-LEVEL: ${result.pLevel} (${driver})`,
       "",
-      `PERSONNEL STRENGTH: ${p.pct.toFixed(1)}% (${p.effective} EFFECTIVE / ${p.authorized} AUTHORIZED)`,
-      `  ASG: ${p.assigned}  ATT: ${p.attached}  NON-DEP: ${p.nonDeployable}  LTD: ${p.limited}  DET: ${p.detached}  IA: ${p.ia}  JIA: ${p.jia}`,
+      bluf,
+      reasonLine,
       "",
-      `CRITICAL MOS FILL: ${c.pct.toFixed(1)}% (${c.filled} / ${c.authorized} BILLETS)`,
-      `  BMOS EXACT: ${s.exactBMOS}  BMOS +/-1: ${s.flexBMOS}  PMOS EXACT: ${s.exactPMOS}  PMOS +/-1: ${s.flexPMOS}  GAPS: ${s.unfilled}`,
+      "METRICS",
+      `  PERSONNEL STRENGTH: ${p.pct.toFixed(1)}% [P-${pBand}] (${p.effective} EFFECTIVE / ${p.authorized} AUTHORIZED)`,
+      `    ASG ${p.assigned} / ATT ${p.attached} / NON-DEP ${p.nonDeployable} / LTD ${p.limited} / DET ${p.detached} / IA ${p.ia} / JIA ${p.jia}`,
+      `  CRITICAL MOS: ${c.pct.toFixed(1)}% [P-${cBand}] (${c.filled} / ${c.authorized} BILLETS)`,
+      `    BMOS EXACT ${s.exactBMOS} / BMOS +/-1 ${s.flexBMOS} / PMOS EXACT ${s.exactPMOS} / PMOS +/-1 ${s.flexPMOS} / GAPS ${s.unfilled}`,
+      "",
+      `ACTIONS: ${actions}`,
+      "",
+      `RESULTS: ${results}`,
       "",
       policyLine,
-      `EXCLUDED: ${result.excludedContractors} CONTRACTOR ROW(S)`,
-      "REF: MCO 3000.13B PARA 7C",
-      "",
-      `COMPUTED: ${computedAt.toISOString()} BY DRRS P-LEVEL CALCULATOR (POC)`
+      `EXCLUDED: ${result.excludedContractors} contractor row(s).`,
+      "REF: MCO 3000.13B para 7c.",
+      `COMPUTED: ${computedAt.toISOString()} by DRRS P-Level Calculator (POC).`
     ].join("\n");
+  }
+
+  // Replace characters DRRS Remarks fields commonly reject: smart quotes,
+  // em/en dashes, non-ASCII whitespace, ellipsis, arrows, zero-width
+  // joiners, and any remaining non-ASCII. Preserves newlines. Idempotent.
+  function sanitizeForDRRS(text) {
+    return String(text)
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")          // curly single quotes
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')          // curly double quotes
+      .replace(/[\u2013\u2014\u2212]/g, "-")                 // en-dash, em-dash, minus
+      .replace(/\u2026/g, "...")                              // ellipsis
+      .replace(/[\u2192\u2794\u27A1]/g, "->")                // rightward arrows
+      .replace(/[\u00A0\u2007\u202F\u2009\u200A]/g, " ")    // nbsp & thin spaces
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")           // zero-width chars
+      .replace(/[^\x20-\x7E\n]/g, "?");                       // anything else non-printable ASCII
   }
 
   function buildAuditCSV(result) {
@@ -364,14 +543,21 @@
 
   async function copyBriefToClipboard() {
     if (!state.lastResult) return;
-    const unit = readUnitProfile();
-    const asOf = parseAsOfDate(unit.asOf) || new Date();
-    const text = buildReadinessBrief(state.lastResult, unit, asOf, new Date());
+    const textarea = $("#brief-textarea");
+    let text = textarea ? textarea.value : "";
+    if (!text) {
+      // Fallback: regenerate on the fly if the textarea is empty.
+      const unit = readUnitProfile();
+      const asOf = parseAsOfDate(unit.asOf) || new Date();
+      text = buildReadinessBrief(state.lastResult, unit, asOf, new Date());
+    }
+    const drrsReady = $("#drrs-ready") ? $("#drrs-ready").checked : true;
+    if (drrsReady) text = sanitizeForDRRS(text);
+
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
-        // Fallback for older or file:// contexts.
         const ta = document.createElement("textarea");
         ta.value = text;
         ta.setAttribute("readonly", "");
@@ -382,9 +568,43 @@
         document.execCommand("copy");
         document.body.removeChild(ta);
       }
-      setExportStatus("Brief copied to clipboard");
+      const over = text.length > DRRS_REMARKS_LIMIT;
+      setExportStatus(
+        over
+          ? `Copied (${text.length} chars, OVER ${DRRS_REMARKS_LIMIT} limit)`
+          : `Copied ${text.length} / ${DRRS_REMARKS_LIMIT} chars`
+      );
     } catch (err) {
       setExportStatus("Copy failed: " + err.message);
+    }
+  }
+
+  // Populate the brief textarea from the latest result. Called when the
+  // user clicks Calculate. Does not run on every unit-profile edit so the
+  // user can tweak the brief without losing edits.
+  function renderBriefPreview(result) {
+    const ta = $("#brief-textarea");
+    if (!ta) return;
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    ta.value = buildReadinessBrief(result, unit, asOf, new Date());
+    updateBriefCount();
+  }
+
+  function updateBriefCount() {
+    const ta = $("#brief-textarea");
+    const out = $("#brief-count");
+    const limit = $("#brief-limit");
+    if (!ta || !out) return;
+    const raw = ta.value;
+    const effective = ($("#drrs-ready") && $("#drrs-ready").checked)
+      ? sanitizeForDRRS(raw)
+      : raw;
+    out.textContent = effective.length.toLocaleString();
+    if (limit) limit.textContent = DRRS_REMARKS_LIMIT.toLocaleString();
+    const container = $("#brief-count-container");
+    if (container) {
+      container.classList.toggle("over-limit", effective.length > DRRS_REMARKS_LIMIT);
     }
   }
 
@@ -581,14 +801,6 @@
         }
         handleFile(kind, file);
       });
-      // Keyboard activation on the slot (tabindex=0 on the <label>).
-      slot.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          const input = slot.querySelector('input[type="file"]');
-          if (input) input.click();
-        }
-      });
     });
 
     // Prevent the browser from navigating away if a file is dropped outside
@@ -599,9 +811,33 @@
 
   // ---- Wire it up ------------------------------------------------------
   function init() {
-    // Default the as-of date to today.
+    // Default the as-of date to today, then overlay any stored profile.
     const asofInput = $("#unit-asof");
     if (asofInput && !asofInput.value) asofInput.value = todayISODate();
+    loadProfileFromStorage();
+
+    // Auto-save unit profile fields on change.
+    ["unit-uic", "unit-name", "unit-asof"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", saveProfileToStorage);
+    });
+    const policyEl = document.getElementById("policy-limited");
+    if (policyEl) policyEl.addEventListener("change", saveProfileToStorage);
+
+    // Profile export / import / wipe controls.
+    const exportBtn = document.getElementById("profile-export");
+    const importBtn = document.getElementById("profile-import");
+    const importInput = document.getElementById("profile-import-input");
+    const wipeBtn = document.getElementById("wipe-local-data");
+    if (exportBtn) exportBtn.addEventListener("click", exportProfileToFile);
+    if (importBtn && importInput) {
+      importBtn.addEventListener("click", () => importInput.click());
+      importInput.addEventListener("change", (e) => {
+        importProfileFromFile(e.target.files[0]);
+        importInput.value = ""; // allow re-selecting same file
+      });
+    }
+    if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
 
     $$('input[type="file"][data-target]').forEach((el) => {
       el.addEventListener("change", (e) => {
@@ -645,6 +881,15 @@
     if (copyBtn) copyBtn.addEventListener("click", copyBriefToClipboard);
     if (jsonBtn) jsonBtn.addEventListener("click", downloadJSON);
     if (csvBtn) csvBtn.addEventListener("click", downloadAuditCSV);
+
+    const briefTa = document.getElementById("brief-textarea");
+    const drrsReady = document.getElementById("drrs-ready");
+    const regenBtn = document.getElementById("brief-regen");
+    if (briefTa) briefTa.addEventListener("input", updateBriefCount);
+    if (drrsReady) drrsReady.addEventListener("change", updateBriefCount);
+    if (regenBtn) regenBtn.addEventListener("click", () => {
+      if (state.lastResult) renderBriefPreview(state.lastResult);
+    });
   }
 
   if (document.readyState === "loading") {

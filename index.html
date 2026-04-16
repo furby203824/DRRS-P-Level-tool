@@ -9,18 +9,20 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#upload-section">Skip to calculator</a>
+
   <header class="site-header">
     <div class="wrap">
       <h1>DRRS P-Level Calculator</h1>
       <p class="tagline">Personnel Readiness per MCO 3000.13B &middot; Proof of Concept</p>
-      <nav class="header-nav">
+      <nav class="header-nav" aria-label="Page sections">
         <a href="#upload-section">Calculator</a>
         <a href="#methodology-section">Methodology</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap" id="main">
     <section class="banner opsec">
       <strong>OPSEC:</strong> All processing happens in your browser. Nothing is uploaded to a server.
       Do not load real PII into this POC without an approved hosting decision.
@@ -46,29 +48,39 @@
             <input type="date" id="unit-asof" />
           </label>
         </div>
-        <p class="policy-hint">Stamped onto the readiness brief, JSON export, and audit CSV filename. Defaults to today's date.</p>
+        <div class="unit-actions">
+          <p class="policy-hint">Auto-saved to your browser. Stamped onto the readiness brief, JSON export, and audit CSV filename.</p>
+          <div class="unit-action-row">
+            <button id="profile-export" type="button" class="btn btn-ghost small"
+                    title="Download the unit profile as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
+            <button id="profile-import" type="button" class="btn btn-ghost small"
+                    title="Load a unit profile JSON file saved earlier">Import Profile</button>
+            <input type="file" id="profile-import-input" accept=".json" hidden />
+            <span id="profile-status" class="export-status" aria-live="polite"></span>
+          </div>
+        </div>
       </fieldset>
 
-      <div class="upload-grid">
-        <label class="slot" data-slot="roster" tabindex="0" aria-label="Alpha Roster CSV file slot, click or drop a file">
+      <div class="upload-grid" role="group" aria-label="CSV upload slots">
+        <label class="slot" data-slot="roster">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
-          <input type="file" accept=".csv" data-target="roster" />
-          <div class="slot-status" data-status="roster">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="roster" aria-describedby="status-roster" />
+          <div class="slot-status" id="status-roster" data-status="roster" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="structure" tabindex="0" aria-label="T/O Structure CSV file slot, click or drop a file">
+        <label class="slot" data-slot="structure">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
-          <input type="file" accept=".csv" data-target="structure" />
-          <div class="slot-status" data-status="structure">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="structure" aria-describedby="status-structure" />
+          <div class="slot-status" id="status-structure" data-status="structure" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
-        <label class="slot" data-slot="critical" tabindex="0" aria-label="Critical MOS List CSV file slot, click or drop a file">
+        <label class="slot" data-slot="critical">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
-          <input type="file" accept=".csv" data-target="critical" />
-          <div class="slot-status" data-status="critical">Drop CSV or click to browse</div>
+          <input type="file" accept=".csv" data-target="critical" aria-describedby="status-critical" />
+          <div class="slot-status" id="status-critical" data-status="critical" aria-live="polite">Drop CSV or click to browse</div>
         </label>
       </div>
 
@@ -91,10 +103,19 @@
         </label>
       </fieldset>
 
-      <div id="errors" class="errors" hidden></div>
+      <div id="errors" class="errors" role="alert" aria-live="polite" hidden></div>
     </section>
 
     <section class="card" id="results-section" hidden>
+      <div class="print-header" aria-hidden="true">
+        <div class="print-title">DRRS PERSONNEL READINESS</div>
+        <div class="print-meta">
+          <span>UNIT: <span id="print-unit">&mdash;</span></span>
+          <span>AS OF: <span id="print-asof">&mdash;</span></span>
+          <span>PRINTED: <span id="print-now">&mdash;</span></span>
+        </div>
+      </div>
+
       <div class="results-head">
         <div class="results-head-title">
           <h2>2. Results</h2>
@@ -152,6 +173,30 @@
           <code id="formula-final-line"></code>
           <p class="muted small" id="formula-final-note"></p>
         </div>
+      </div>
+
+      <div class="breakdown brief-block" id="brief-block">
+        <h3>DRRS Remarks Brief &mdash; Editable</h3>
+        <p class="muted small">
+          BLUF / Actions / Results for the DRRS-MC Remarks field. Edit the
+          Actions and Results lines before copying. Regenerate to reset to
+          the calculator's output.
+        </p>
+        <div class="brief-controls">
+          <label class="brief-toggle">
+            <input type="checkbox" id="drrs-ready" checked />
+            <span>DRRS-Ready (strip smart quotes, dashes, non-ASCII)</span>
+          </label>
+          <button id="brief-regen" type="button" class="btn btn-ghost small">Regenerate</button>
+          <div id="brief-count-container" class="brief-count" aria-live="polite">
+            <span id="brief-count">0</span>
+            <span class="brief-count-sep">/</span>
+            <span id="brief-limit">2,000</span>
+            <span class="brief-count-sep">chars</span>
+          </div>
+        </div>
+        <textarea id="brief-textarea" class="brief-textarea" rows="18"
+                  aria-label="Readiness brief, editable before copy"></textarea>
       </div>
 
       <div class="breakdown">
@@ -532,10 +577,12 @@
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
+    <div class="wrap footer-row">
       <p class="small muted">
         Implements MCO 3000.13B para 7c. Synthetic sample data only &mdash; EDIPIs prefixed <code>99</code>.
       </p>
+      <button id="wipe-local-data" type="button" class="btn btn-ghost small"
+              title="Clear the browser-side copy of the unit profile and any cached data">Wipe Local Data</button>
     </div>
   </footer>
 

@@ -307,14 +307,113 @@ const blocks: Block[] = [
     ),
   },
   {
-    num: "\u00A7", title: "Source Documents",
+    num: "12", title: "Regulatory Framework & NIST Controls",
     content: (
-      <ul className="ml-4 list-disc space-y-1 text-xs text-[var(--color-body)]">
-        <li>MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c</li>
-        <li>MARADMIN 518-21 DRRS-MC Consolidation to DRRS</li>
-        <li>Commander&apos;s Readiness Handbook (16 SEP 2020)</li>
-        <li>Personnel Readiness SHO/MOC (Updated OCT 2025)</li>
-      </ul>
+      <>
+        <p className="text-xs text-[var(--color-body)]">
+          Regulatory hierarchy governing this system, listed highest to lowest authority. The NIST SP 800-171r3 control families below are the primary technical standard; see block 08 for which controls are N/A due to the static architecture.
+        </p>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Authority Hierarchy</div>
+        <ol className="ml-4 mt-1 list-decimal space-y-1 text-xs text-[var(--color-body)]">
+          <li><strong className="text-[var(--color-accent)]">United States Code</strong> &mdash; 10 U.S.C., 5 U.S.C., 44 U.S.C.</li>
+          <li><strong className="text-[var(--color-accent)]">Executive Orders</strong> &mdash; EO 13556 (CUI Program), EO 14028 (Cybersecurity)</li>
+          <li><strong className="text-[var(--color-accent)]">Code of Federal Regulations</strong> &mdash; 32 CFR Part 2002 (CUI), 32 CFR Part 170 (CMMC), 36 CFR Part 1194 (Section 508)</li>
+          <li><strong className="text-[var(--color-accent)]">OMB Memoranda</strong> &mdash; M-17-12 (Breach Notification), M-22-09 (Zero Trust)</li>
+          <li><strong className="text-[var(--color-accent)]">DoD Instructions</strong> &mdash; DoDI 8500.01, DoDI 5200.48, DoDI 5400.11, DoDI 8582.01, DoDI 8510.01</li>
+          <li><strong className="text-[var(--color-accent)]">DoD Manuals</strong> &mdash; DoDM 5400.11 Vol 2, DoD 5015.02-STD (Records Management)</li>
+          <li><strong className="text-[var(--color-accent)]">NIST Standards</strong> &mdash; SP 800-53r5, SP 800-171r3 (May 2024), SP 800-171A</li>
+          <li><strong className="text-[var(--color-accent)]">DISA STIGs</strong> &mdash; Applicable only if deployed on DoD infrastructure (N/A for this PoC)</li>
+          <li><strong className="text-[var(--color-accent)]">Component Orders</strong> &mdash; MCO 5239.2B, MCO 3000.13B</li>
+          <li><strong className="text-[var(--color-accent)]">MARADMIN Guidance</strong></li>
+        </ol>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">NIST SP 800-171r3 Control Families (Rev 3, May 2024)</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">
+          Control numbers follow the Rev 3 family.control format. PoC status reflects the current static client-side architecture. All controls become fully required if the system transitions to operational deployment with real data.
+        </p>
+
+        <div className="mt-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">03.01 &mdash; Access Control</div>
+          <ul className="ml-4 mt-1 list-disc space-y-0.5 text-xs text-[var(--color-body)]">
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.01.01</span> Account Management &mdash; Limit access to authorized users, implement RBAC</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.01.02</span> Access Enforcement &mdash; Limit transactions to authorized functions</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.01.03</span> Information Flow Enforcement &mdash; Control CUI flow per approved authorizations</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.01.22</span> Publicly Accessible Content &mdash; Control CUI on public systems</li>
+          </ul>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">PoC: N/A &mdash; no user accounts, no CUI with synthetic data.</p>
+        </div>
+
+        <div className="mt-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">03.03 &mdash; Audit &amp; Accountability</div>
+          <ul className="ml-4 mt-1 list-disc space-y-0.5 text-xs text-[var(--color-body)]">
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.03.01</span> Event Logging &mdash; Create and retain audit logs</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.03.02</span> Audit Record Content &mdash; Trace actions to individual users</li>
+          </ul>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">PoC: N/A &mdash; no server-side logging. History is browser-local.</p>
+        </div>
+
+        <div className="mt-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">03.05 &mdash; Identification &amp; Authentication</div>
+          <ul className="ml-4 mt-1 list-disc space-y-0.5 text-xs text-[var(--color-body)]">
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.05.01</span> User Identification &mdash; Identify and authenticate before access</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.05.02</span> Multifactor Authentication &mdash; MFA for local and network access</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.05.03</span> Authenticator Management &mdash; Replay-resistant mechanisms</li>
+          </ul>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">PoC: N/A &mdash; no authentication system.</p>
+        </div>
+
+        <div className="mt-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">03.13 &mdash; System &amp; Communications Protection</div>
+          <ul className="ml-4 mt-1 list-disc space-y-0.5 text-xs text-[var(--color-body)]">
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.13.01</span> Boundary Protection &mdash; Monitor and protect external/internal boundaries</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.13.08</span> Transmission Confidentiality &mdash; Encrypt CUI in transit (TLS 1.2+)</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.13.10</span> Cryptographic Key Management &mdash; Establish and manage keys</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.13.16</span> Confidentiality at Rest &mdash; Encrypt CUI at rest</li>
+          </ul>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">PoC: TLS inherited from GitHub Pages. Client-side AES-256-GCM available for profile export.</p>
+        </div>
+
+        <div className="mt-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]">03.14 &mdash; System &amp; Information Integrity</div>
+          <ul className="ml-4 mt-1 list-disc space-y-0.5 text-xs text-[var(--color-body)]">
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.14.01</span> Flaw Remediation &mdash; Identify and correct flaws in a timely manner</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.14.02</span> Malicious Code Protection &mdash; Protect at appropriate locations</li>
+            <li><span className="font-mono text-[var(--color-ink-soft)]">03.14.06</span> Security Monitoring &mdash; Detect attacks and indicators</li>
+          </ul>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">PoC: 03.14.01 applicable (npm audit for dependency scanning). 03.14.02 and 03.14.06 N/A for static site.</p>
+        </div>
+      </>
+    ),
+  },
+  {
+    num: "\u00A7", title: "Source Documents & Regulatory Authority",
+    content: (
+      <>
+        <div className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Primary Calculation Authority</div>
+        <ul className="ml-4 mt-1 list-disc space-y-1 text-xs text-[var(--color-body)]">
+          <li>MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c</li>
+          <li>MARADMIN 518-21 DRRS-MC Consolidation to DRRS</li>
+          <li>Commander&apos;s Readiness Handbook (16 SEP 2020)</li>
+          <li>Personnel Readiness SHO/MOC (Updated OCT 2025)</li>
+        </ul>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Compliance Framework Authority</div>
+        <ul className="ml-4 mt-1 list-disc space-y-1 text-xs text-[var(--color-body)]">
+          <li>DoDI 8500.01 &mdash; Cybersecurity</li>
+          <li>DoDI 5200.48 &mdash; Controlled Unclassified Information</li>
+          <li>DoDI 5400.11 &mdash; DoD Privacy Program</li>
+          <li>DoDI 8582.01 &mdash; Security of Non-DoD IS Processing DoD Information</li>
+          <li>DoDI 8510.01 &mdash; Risk Management Framework</li>
+          <li>DoDM 5400.11 Vol 2 &mdash; PII Breach Notification</li>
+          <li>32 CFR Part 2002 &mdash; CUI Federal Standard</li>
+          <li>NIST SP 800-171r3 &mdash; Protecting CUI in Nonfederal Systems (May 2024)</li>
+          <li>NIST SP 800-53r5 &mdash; Security and Privacy Controls</li>
+          <li>DD Form 2875 &mdash; System Authorization Access Request (2020 revision)</li>
+          <li>EO 13556 &mdash; Controlled Unclassified Information</li>
+          <li>EO 14028 &mdash; Improving the Nation&apos;s Cybersecurity</li>
+        </ul>
+      </>
     ),
   },
 ];

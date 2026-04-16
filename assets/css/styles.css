@@ -237,7 +237,7 @@ html, body {
   display: block;
   border: 1.5px dashed var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px 16px;
   cursor: pointer;
   background: #fafbfc;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
@@ -1021,8 +1021,8 @@ html, body {
   .unit-grid { grid-template-columns: 1fr; }
   .results-grid { grid-template-columns: 1fr; }
   .plevel-value { font-size: 44px; }
-  .meth-block > summary { grid-template-columns: 44px 1fr 18px; gap: 12px; }
-  .meth-block .meth-num { font-size: 15px; padding: 6px 0; min-width: 44px; }
+  .meth-block > summary { grid-template-columns: 48px 1fr 18px; gap: 12px; }
+  .meth-block .meth-num { font-size: 15px; padding: 6px 0; min-width: 48px; }
   .meth-body { padding-left: 56px; }
   .band-grid, .example-grid { grid-template-columns: 1fr; }
   .rule-list { grid-template-columns: 1fr; gap: 2px 0; }

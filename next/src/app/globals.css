@@ -20,7 +20,7 @@
   --color-ink-soft: #e7e5e4;     /* stone-200 */
   --color-body: #d6d3d1;         /* stone-300 */
   --color-muted: #a8a29e;        /* stone-400 */
-  --color-mute-2: #78716c;       /* stone-500 */
+  --color-mute-2: #8a8480;       /* stone-500 adjusted — 5.36:1 on stone-950 (AA) */
   --color-mute-3: #57534e;       /* stone-600 */
 
   /* Brass accent (command color) */

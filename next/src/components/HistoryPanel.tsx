@@ -70,10 +70,10 @@ export function HistoryPanel({ refreshKey }: Props) {
           Calculation History
         </h2>
         <div className="flex items-center gap-2">
-          <button onClick={doExport} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">
+          <button onClick={doExport} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">
             Export History
           </button>
-          <button onClick={doClear} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">
+          <button onClick={doClear} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">
             Clear
           </button>
           <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{statusMsg}</span>

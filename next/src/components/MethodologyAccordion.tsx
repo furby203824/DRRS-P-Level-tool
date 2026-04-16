@@ -439,8 +439,8 @@ export function MethodologyAccordion() {
           Methodology
         </h2>
         <div className="flex gap-2">
-          <button onClick={expandAll} className="px-2 py-0.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Expand All</button>
-          <button onClick={collapseAll} className="px-2 py-0.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Collapse All</button>
+          <button onClick={expandAll} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Expand All</button>
+          <button onClick={collapseAll} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Collapse All</button>
         </div>
       </div>
       <p className="mt-1 text-xs text-[var(--color-muted)]">

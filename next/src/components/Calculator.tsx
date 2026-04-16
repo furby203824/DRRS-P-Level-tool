@@ -7,7 +7,7 @@ import { calculate, type CalcResult, type RosterRow, type StructureRow, type Cri
 import { validate, normalizeRoster, normalizeStructure, normalizeCritical, SCHEMA, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
-import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle } from "lucide-react";
+import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle, ChevronDown } from "lucide-react";
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";
@@ -168,6 +168,10 @@ export function Calculator() {
   // Track whether the user has manually edited the brief
   const briefEdited = useRef(false);
 
+  // Export dropdown
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
   // Export status
   const [exportMsg, setExportMsg] = useState("");
   const exportTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -284,6 +288,25 @@ export function Calculator() {
       resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [roster, structure, critical, limitedPolicy, detectedUnit, asOfDate]);
+
+  // Auto-calculate when all three files are loaded for the first time
+  useEffect(() => {
+    if (roster && structure && critical && !result) {
+      doCalculate();
+    }
+  }, [roster, structure, critical]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    if (!exportOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [exportOpen]);
 
   // Reset
   const doReset = useCallback(() => {
@@ -469,9 +492,12 @@ export function Calculator() {
 
         {/* Actions */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button onClick={loadSample} className="border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
-            Load Sample Data
-          </button>
+          <div className="flex flex-col gap-1">
+            <button onClick={loadSample} className="border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
+              Load Sample Data
+            </button>
+            <span className="text-xs text-[var(--color-muted)]">Fictional CLB H&amp;S Co. No real data.</span>
+          </div>
           <button onClick={loadRandom} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
             <Shuffle size={14} strokeWidth={1.5} />
             Random Unit
@@ -532,7 +558,18 @@ export function Calculator() {
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={copyBrief} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-3 py-2.5 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Copy size={14} strokeWidth={1.5} /> Copy Brief</button>
               <button onClick={downloadPDF} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-3 py-2.5 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Download size={14} strokeWidth={1.5} /> PDF</button>
-              <button onClick={downloadCSV} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2.5 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]"><Download size={14} strokeWidth={1.5} /> Audit CSV</button>
+              <div ref={exportDropdownRef} className="relative">
+                <button onClick={() => setExportOpen((o) => !o)} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-2.5 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]">
+                  <Download size={14} strokeWidth={1.5} /> More <ChevronDown size={12} strokeWidth={1.5} />
+                </button>
+                {exportOpen && (
+                  <div className="absolute right-0 top-full z-10 mt-1 min-w-[10rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+                    <button onClick={() => { downloadCSV(); setExportOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-elevated)]">Audit CSV</button>
+                    <button onClick={() => { downloadJSON(); setExportOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-elevated)]">JSON</button>
+                    <button onClick={() => { downloadXLSX(); setExportOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-elevated)]">XLSX</button>
+                  </div>
+                )}
+              </div>
               <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{exportMsg}</span>
             </div>
           </div>

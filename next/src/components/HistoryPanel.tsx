@@ -17,16 +17,16 @@ function triggerDownload(filename: string, mime: string, content: string): void 
 }
 
 const BAND_BORDER: Record<number, string> = {
-  1: "border-l-emerald-700",
-  2: "border-l-yellow-600",
-  3: "border-l-orange-600",
-  4: "border-l-red-700",
+  1: "border-l-[var(--color-p1)]",
+  2: "border-l-[var(--color-p2)]",
+  3: "border-l-[var(--color-p3)]",
+  4: "border-l-[var(--color-p4)]",
 };
 const BAND_BG: Record<number, string> = {
-  1: "bg-emerald-700",
-  2: "bg-yellow-600",
-  3: "bg-orange-600",
-  4: "bg-red-700",
+  1: "bg-[var(--color-p1)]",
+  2: "bg-[var(--color-p2)]",
+  3: "bg-[var(--color-p3)]",
+  4: "bg-[var(--color-p4)]",
 };
 
 interface Props {
@@ -111,7 +111,7 @@ export function HistoryPanel({ refreshKey }: Props) {
                     <td className="py-1 pr-3">{e.unit.uic || "NOUIC"}</td>
                     <td className="py-1 pr-3 text-[var(--color-body)]">{e.unit.name}</td>
                     <td className="py-1 pr-3">
-                      <span className={`inline-block px-1.5 py-px text-white ${BAND_BG[band] ?? "bg-gray-600"}`}>
+                      <span className={`inline-block px-1.5 py-px text-white ${BAND_BG[band] ?? "bg-[var(--color-mute-3)]"}`}>
                         {e.result.pLevel}
                       </span>
                     </td>

@@ -56,26 +56,26 @@ export function FileSlot({ title, subtitle, accept = ".csv", onFile }: Props) {
 
   const borderCls =
     slotState === "loaded"
-      ? "border-amber-600 border-solid bg-amber-950/20"
+      ? "border-[var(--color-accent)] border-solid bg-[var(--color-accent-tint)]/20"
       : slotState === "error"
-        ? "border-red-700 border-solid bg-red-950/10"
+        ? "border-[var(--color-p4)] border-solid bg-[var(--color-error-tint)]/10"
         : slotState === "dragover"
-          ? "border-amber-700 border-solid bg-stone-900"
-          : "border-stone-700 border-dashed";
+          ? "border-[var(--color-accent-strong)] border-solid bg-[var(--color-surface)]"
+          : "border-[var(--color-border)] border-dashed";
 
   const iconColor =
-    slotState === "loaded" ? "text-amber-500"
-    : slotState === "error" ? "text-red-500"
-    : "text-stone-500";
+    slotState === "loaded" ? "text-[var(--color-accent-head)]"
+    : slotState === "error" ? "text-[var(--color-error)]"
+    : "text-[var(--color-mute-2)]";
 
   const statusColor =
-    slotState === "loaded" ? "text-amber-400"
-    : slotState === "error" ? "text-red-400"
-    : "text-stone-500";
+    slotState === "loaded" ? "text-[var(--color-accent-hi)]"
+    : slotState === "error" ? "text-[var(--color-error-hi)]"
+    : "text-[var(--color-mute-2)]";
 
   return (
     <label
-      className={`group block cursor-pointer border-2 p-4 transition-all hover:border-amber-700 hover:bg-stone-900 focus-within:border-amber-600 focus-within:ring-2 focus-within:ring-amber-600/40 ${borderCls}`}
+      className={`group block cursor-pointer border-2 p-4 transition-all hover:border-[var(--color-accent-strong)] hover:bg-[var(--color-surface)] focus-within:border-[var(--color-accent)] focus-within:ring-2 focus-within:ring-[var(--color-accent)]/40 ${borderCls}`}
       onDragEnter={(e) => { e.preventDefault(); setSlotState((prev) => prev === "loaded" ? prev : "dragover"); }}
       onDragOver={(e) => { e.preventDefault(); }}
       onDragLeave={(e) => {
@@ -87,8 +87,8 @@ export function FileSlot({ title, subtitle, accept = ".csv", onFile }: Props) {
       <div className="flex items-start gap-3">
         <Icon size={20} strokeWidth={1.5} className={`mt-0.5 flex-shrink-0 ${iconColor}`} />
         <div className="flex-1">
-          <div className="font-mono text-sm font-semibold text-stone-100">{title}</div>
-          <div className="mt-0.5 text-xs text-stone-400">{subtitle}</div>
+          <div className="font-mono text-sm font-semibold text-[var(--color-ink)]">{title}</div>
+          <div className="mt-0.5 text-xs text-[var(--color-muted)]">{subtitle}</div>
         </div>
       </div>
       <input

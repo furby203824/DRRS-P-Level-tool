@@ -466,7 +466,7 @@ export function Calculator() {
         </p>
 
         {/* File slots */}
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
           <FileSlot
             title="Alpha Roster"
             subtitle="One row per Marine / service member"
@@ -578,7 +578,7 @@ export function Calculator() {
           </div>
 
           {/* P-Level + metrics grid */}
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-4 grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-3">
             {/* P-Level card */}
             <div className="flex flex-col items-center justify-center border-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-6">
               <span className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">
@@ -666,7 +666,7 @@ export function Calculator() {
               ref={briefRef}
               value={briefText}
               onChange={(e) => { setBriefText(e.target.value); briefEdited.current = true; }}
-              rows={16}
+              rows={10}
               className="mt-2 block w-full resize-y border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-mono text-xs leading-relaxed text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
               aria-label="Readiness brief, editable before copy"
             />

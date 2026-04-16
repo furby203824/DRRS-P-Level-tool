@@ -229,7 +229,7 @@ html, body {
 .upload-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 16px;
   margin: 16px 0 18px;
 }
 .slot {
@@ -723,7 +723,7 @@ html, body {
 .brief-textarea {
   width: 100%;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   padding: 10px 12px;
   border: 1px solid var(--border);

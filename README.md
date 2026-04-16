@@ -138,4 +138,5 @@ alpha roster example.csv
 to structure example.csv
 critical mos example.csv
 DESIGN_SYSTEM.md     -- UI style and scheme reference (for extension/handoff)
+UX_AUDIT_PROMPT.md   -- Reusable LLM prompt for heuristic UX evaluation
 ```

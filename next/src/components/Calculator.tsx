@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Papa from "papaparse";
 
 import { calculate, type CalcResult, type RosterRow, type StructureRow, type CriticalRow } from "@/lib/plevel";
-import { validate, normalizeRoster, normalizeStructure, normalizeCritical, type FileKind, type ValidationResult } from "@/lib/parser";
+import { validate, normalizeRoster, normalizeStructure, normalizeCritical, SCHEMA, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
 import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle } from "lucide-react";
@@ -152,6 +152,9 @@ export function Calculator() {
   const [briefText, setBriefText] = useState("");
   const briefRef = useRef<HTMLTextAreaElement>(null);
 
+  // Scroll target for results section
+  const resultsRef = useRef<HTMLElement>(null);
+
   // History refresh key — bump to re-read LocalStorage in HistoryPanel
   const [historyKey, setHistoryKey] = useState(0);
 
@@ -267,6 +270,11 @@ export function Calculator() {
     // Save aggregate snapshot to history
     saveSnapshot(snapshotFromResult(res, unit, asOfDate || todayISO()));
     setHistoryKey((k) => k + 1);
+
+    // Scroll to results after React renders the section
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }, [roster, structure, critical, limitedPolicy, detectedUnit, asOfDate]);
 
   // Reset
@@ -413,9 +421,30 @@ export function Calculator() {
 
         {/* File slots */}
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <FileSlot title="Alpha Roster" subtitle="One row per Marine / service member" rowCount={roster?.length} onFile={(f) => handleFile("roster", f)} />
-          <FileSlot title="T/O Structure" subtitle="Authorized billets by BMOS + PayGrade" rowCount={structure?.length} onFile={(f) => handleFile("structure", f)} />
-          <FileSlot title="Critical MOS List" subtitle="Mission-essential MOS for unit type" rowCount={critical?.length} onFile={(f) => handleFile("critical", f)} />
+          <FileSlot
+            title="Alpha Roster"
+            subtitle="One row per Marine / service member"
+            rowCount={roster?.length}
+            expectedCols={SCHEMA.roster.required}
+            onFile={(f) => handleFile("roster", f)}
+            onClear={() => { setRoster(null); setValidation((p) => ({ ...p, roster: null })); setResult(null); setBriefText(""); }}
+          />
+          <FileSlot
+            title="T/O Structure"
+            subtitle="Authorized billets by BMOS + PayGrade"
+            rowCount={structure?.length}
+            expectedCols={SCHEMA.structure.required}
+            onFile={(f) => handleFile("structure", f)}
+            onClear={() => { setStructure(null); setValidation((p) => ({ ...p, structure: null })); setResult(null); setBriefText(""); }}
+          />
+          <FileSlot
+            title="Critical MOS List"
+            subtitle="Mission-essential MOS for unit type"
+            rowCount={critical?.length}
+            expectedCols={SCHEMA.critical.required}
+            onFile={(f) => handleFile("critical", f)}
+            onClear={() => { setCritical(null); setValidation((p) => ({ ...p, critical: null })); setResult(null); setBriefText(""); }}
+          />
         </div>
 
         {/* Actions */}
@@ -475,7 +504,7 @@ export function Calculator() {
 
       {/* ---- RESULTS ---- */}
       {result && (
-        <section className="mb-8 border-2 border-[var(--color-accent-strong)] bg-[var(--color-surface)]/40 p-6">
+        <section ref={resultsRef} className="mb-8 border-2 border-[var(--color-accent-strong)] bg-[var(--color-surface)]/40 p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-elevated)] pb-3">
             <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--color-accent-head)]">
               2. Results

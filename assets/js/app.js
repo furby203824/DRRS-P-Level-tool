@@ -22,6 +22,21 @@
   // future schema change can migrate or discard old data cleanly.
   const PROFILE_STORAGE_KEY = "drrs-plevel.unitProfile.v1";
 
+  // History of aggregate calculation snapshots. Deliberately excludes
+  // per-billet audit data (EDIPIs / names) -- those stay only in
+  // per-run exports. History is for trend visualization and
+  // "on this date, this UIC was P-X" lookups.
+  const HISTORY_STORAGE_KEY = "drrs-plevel.history.v1";
+  const HISTORY_MAX_ENTRIES = 30;
+
+  // Web Crypto parameters for encrypted profile export (AES-256-GCM
+  // over PBKDF2-SHA256 derived from a user passphrase). OWASP 2023
+  // guidance is 600,000 PBKDF2-SHA256 iterations minimum.
+  const CRYPTO_PBKDF2_ITERATIONS = 600000;
+  const CRYPTO_SALT_BYTES = 16;
+  const CRYPTO_IV_BYTES = 12;
+  const CRYPTO_MIN_PASSPHRASE = 8;
+
   // Placeholder text the S-1 overwrites in the brief textarea before copy.
   const ACTIONS_PLACEHOLDER =
     "[S-1 to fill: manning requests submitted, recruiting pipeline engagement, " +
@@ -136,44 +151,197 @@
     } catch (_) { return false; }
   }
 
-  function exportProfileToFile() {
-    const profile = currentProfileObject();
+  // ---- Web Crypto helpers (AES-256-GCM + PBKDF2-SHA256) ---------------
+  function b64encode(buf) {
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+  }
+  function b64decode(str) {
+    return Uint8Array.from(atob(str), function (c) { return c.charCodeAt(0); });
+  }
+
+  async function deriveKey(passphrase, salt) {
+    var enc = new TextEncoder();
+    var keyMaterial = await crypto.subtle.importKey(
+      "raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: salt, iterations: CRYPTO_PBKDF2_ITERATIONS, hash: "SHA-256" },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptPayload(plainObj, passphrase) {
+    var salt = crypto.getRandomValues(new Uint8Array(CRYPTO_SALT_BYTES));
+    var iv = crypto.getRandomValues(new Uint8Array(CRYPTO_IV_BYTES));
+    var key = await deriveKey(passphrase, salt);
+    var pt = new TextEncoder().encode(JSON.stringify(plainObj));
+    var ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, pt);
+    return {
+      schema: "drrs-plevel-unit-profile.v2",
+      encrypted: true,
+      cipher: "AES-GCM-256",
+      kdf: "PBKDF2-SHA256",
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      salt: b64encode(salt),
+      iv: b64encode(iv),
+      ciphertext: b64encode(ct),
+      exportedAt: new Date().toISOString()
+    };
+  }
+
+  async function decryptPayload(envelope, passphrase) {
+    var salt = b64decode(envelope.salt);
+    var iv = b64decode(envelope.iv);
+    var ct = b64decode(envelope.ciphertext);
+    var key = await deriveKey(passphrase, salt);
+    var pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
+  // ---- Passphrase dialog (uses native <dialog>) -----------------------
+  function promptForPassphrase(mode) {
+    // mode: "encrypt" (show confirm field, validate length) or "decrypt"
+    return new Promise(function (resolve) {
+      var dlg = document.getElementById("passphrase-dialog");
+      if (!dlg || typeof dlg.showModal !== "function") {
+        // Fallback for extremely old browsers: use window.prompt.
+        var p = window.prompt(
+          mode === "encrypt"
+            ? "Pick a passphrase for encryption (min 8 chars):"
+            : "Enter passphrase to decrypt:"
+        );
+        resolve(p || null);
+        return;
+      }
+      var form = dlg.querySelector("form");
+      var title = document.getElementById("passphrase-title");
+      var hint = document.getElementById("passphrase-hint");
+      var input = document.getElementById("passphrase-input");
+      var confirmLabel = document.getElementById("passphrase-confirm-wrap");
+      var confirmInput = document.getElementById("passphrase-confirm");
+      var errEl = document.getElementById("passphrase-error");
+
+      input.value = "";
+      if (confirmInput) confirmInput.value = "";
+      errEl.hidden = true;
+      errEl.textContent = "";
+
+      if (mode === "encrypt") {
+        title.textContent = "Encrypt unit profile";
+        hint.textContent = "Pick a passphrase. You\u2019ll need the same one to import. Minimum 8 characters. If lost, the file cannot be recovered.";
+        if (confirmLabel) confirmLabel.hidden = false;
+      } else {
+        title.textContent = "Decrypt unit profile";
+        hint.textContent = "Enter the passphrase used when this file was exported.";
+        if (confirmLabel) confirmLabel.hidden = true;
+      }
+
+      function cleanup() {
+        form.removeEventListener("submit", onSubmit);
+      }
+      function showError(msg) {
+        errEl.textContent = msg;
+        errEl.hidden = false;
+      }
+      function onSubmit(e) {
+        e.preventDefault();
+        var submitter = e.submitter;
+        if (submitter && submitter.value === "cancel") {
+          cleanup(); dlg.close(); resolve(null); return;
+        }
+        var pass = input.value;
+        if (mode === "encrypt") {
+          if (pass.length < CRYPTO_MIN_PASSPHRASE) {
+            showError("Minimum " + CRYPTO_MIN_PASSPHRASE + " characters.");
+            return;
+          }
+          if (confirmInput && pass !== confirmInput.value) {
+            showError("Passphrases do not match.");
+            return;
+          }
+        } else {
+          if (!pass) { showError("Passphrase is required."); return; }
+        }
+        cleanup(); dlg.close(); resolve(pass);
+      }
+      form.addEventListener("submit", onSubmit);
+      dlg.showModal();
+      input.focus();
+    });
+  }
+
+  // ---- Profile export / import (with optional encryption) -------------
+  async function exportProfileToFile() {
+    var profile = currentProfileObject();
     profile.exportedAt = new Date().toISOString();
     profile.schema = "drrs-plevel-unit-profile.v1";
-    const content = JSON.stringify(profile, null, 2);
-    // Filename reflects the detected UIC if a CSV is loaded; falls back
-    // to NOUIC so the operator still gets a working download.
-    const uicPart = sanitizeForFilename(state.detectedUnit.uic);
-    triggerDownload(`unit-profile-${uicPart}.json`, "application/json", content);
-    setProfileStatus("Profile exported");
+    var encrypt = $("#profile-encrypt") && $("#profile-encrypt").checked;
+    var uicPart = sanitizeForFilename(state.detectedUnit.uic);
+    if (encrypt) {
+      var pass = await promptForPassphrase("encrypt");
+      if (!pass) { setProfileStatus("Export cancelled"); return; }
+      try {
+        var encrypted = await encryptPayload(profile, pass);
+        triggerDownload(
+          "unit-profile-" + uicPart + ".enc.json",
+          "application/json",
+          JSON.stringify(encrypted, null, 2)
+        );
+        setProfileStatus("Encrypted profile exported");
+      } catch (err) {
+        setProfileStatus("Encryption failed: " + err.message);
+      }
+    } else {
+      triggerDownload(
+        "unit-profile-" + uicPart + ".json",
+        "application/json",
+        JSON.stringify(profile, null, 2)
+      );
+      setProfileStatus("Profile exported (plaintext)");
+    }
   }
 
   function importProfileFromFile(file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+    var reader = new FileReader();
+    reader.onload = async function () {
       try {
-        const data = JSON.parse(reader.result);
+        var data = JSON.parse(reader.result);
+        if (data.encrypted === true) {
+          var pass = await promptForPassphrase("decrypt");
+          if (!pass) { setProfileStatus("Import cancelled"); return; }
+          try {
+            data = await decryptPayload(data, pass);
+          } catch (err) {
+            setProfileStatus("Decryption failed \u2014 wrong passphrase or corrupted file.");
+            return;
+          }
+        }
         applyProfileObject(data);
         saveProfileToStorage();
-        setProfileStatus(`Profile loaded from ${file.name}`);
+        setProfileStatus("Profile loaded from " + file.name);
       } catch (err) {
         setProfileStatus("Import failed: " + err.message);
       }
     };
-    reader.onerror = () => setProfileStatus("Could not read " + file.name);
+    reader.onerror = function () { setProfileStatus("Could not read " + file.name); };
     reader.readAsText(file);
   }
 
   function wipeLocalData() {
     const ok = window.confirm(
-      "Wipe locally stored unit profile and any other cached data for this tool?\n\n" +
+      "Wipe locally stored unit profile, calculation history, and any " +
+      "other cached data for this tool?\n\n" +
       "This clears the browser-side copy only (data never left your machine). " +
       "CSV files you've loaded this session will also be cleared."
     );
     if (!ok) return;
     try {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch (_) { /* */ }
     // Reset operator-supplied fields and in-memory state. UIC / Unit
     // Name are derived from the CSV and cleared by reset() below.
@@ -190,6 +358,152 @@
     if (msg) {
       clearTimeout(setProfileStatus._t);
       setProfileStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
+    }
+  }
+
+  // ---- History persistence (aggregate metrics only) -------------------
+  function loadHistoryFromStorage() {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    } catch (_) { return []; }
+  }
+
+  function writeHistoryToStorage(entries) {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
+    } catch (_) { /* quota or privacy mode: silently skip */ }
+  }
+
+  function snapshotFromResult(result, unit, asOfDate) {
+    const p = result.personnel;
+    const c = result.critical;
+    return {
+      savedAt: new Date().toISOString(),
+      asOfDate: unit.asOf || todayISODate(),
+      unit: { uic: unit.uic || "NOUIC", name: unit.name || "" },
+      result: {
+        pLevel: result.pLevel,
+        finalBand: result.band.finalBand,
+        pBand: result.band.pBand,
+        cBand: result.band.cBand,
+        driver: result.band.driver,
+        personnel: {
+          pct: p.pct,
+          effective: p.effective,
+          authorized: p.authorized,
+          assigned: p.assigned,
+          attached: p.attached,
+          nonDeployable: p.nonDeployable,
+          limited: p.limited,
+          detached: p.detached,
+          ia: p.ia,
+          jia: p.jia
+        },
+        critical: {
+          pct: c.pct,
+          filled: c.filled,
+          authorized: c.authorized,
+          fillSummary: c.fillSummary || null
+        },
+        excludedContractors: result.excludedContractors,
+        rosterCount: result.rosterCount
+      },
+      options: result.options
+    };
+  }
+
+  // Save (or update) a snapshot for the current calc. If an entry with
+  // the same (UIC, asOfDate) already exists, replace it -- one report
+  // per period per UIC matches DRRS convention.
+  function saveSnapshot(snapshot) {
+    const entries = loadHistoryFromStorage();
+    const keyOf = (e) => `${e.unit.uic}|${e.asOfDate}`;
+    const key = keyOf(snapshot);
+    const existing = entries.findIndex((e) => keyOf(e) === key);
+    if (existing >= 0) entries[existing] = snapshot;
+    else entries.unshift(snapshot);
+    // Newest first; trim to HISTORY_MAX_ENTRIES.
+    entries.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+    if (entries.length > HISTORY_MAX_ENTRIES) entries.length = HISTORY_MAX_ENTRIES;
+    writeHistoryToStorage(entries);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const body = document.getElementById("history-table-body");
+    const wrap = document.getElementById("history-section");
+    const emptyMsg = document.getElementById("history-empty");
+    if (!body || !wrap) return;
+    const entries = loadHistoryFromStorage();
+    body.innerHTML = "";
+    if (entries.length === 0) {
+      if (emptyMsg) emptyMsg.hidden = false;
+      return;
+    }
+    if (emptyMsg) emptyMsg.hidden = true;
+    for (const e of entries) {
+      const tr = document.createElement("tr");
+      tr.classList.add("history-row", "history-p" + e.result.finalBand);
+      const asOfLabel = formatDateDDMMMYY(
+        parseAsOfDate(e.asOfDate) || new Date(e.savedAt || Date.now())
+      );
+      const savedLabel = e.savedAt
+        ? new Date(e.savedAt).toISOString().slice(0, 16).replace("T", " ")
+        : "";
+      tr.innerHTML = `
+        <td>${escapeHtml(asOfLabel)}</td>
+        <td>${escapeHtml(e.unit.uic || "NOUIC")}</td>
+        <td>${escapeHtml(e.unit.name || "")}</td>
+        <td><span class="tag tag-p${e.result.finalBand}">${escapeHtml(e.result.pLevel)}</span></td>
+        <td class="num">${e.result.personnel.pct.toFixed(1)}%</td>
+        <td class="num">${e.result.critical.pct.toFixed(1)}%</td>
+        <td class="muted small">${escapeHtml(e.result.driver || "")}</td>
+        <td class="muted small">${escapeHtml(savedLabel)}Z</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  function exportHistoryToFile() {
+    const entries = loadHistoryFromStorage();
+    if (!entries.length) {
+      setHistoryStatus("No history to export");
+      return;
+    }
+    const payload = {
+      schema: "drrs-plevel-history.v1",
+      exportedAt: new Date().toISOString(),
+      reference: "MCO 3000.13B para 7c",
+      note: "Aggregate metrics only. No EDIPIs or per-billet detail.",
+      entries
+    };
+    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
+    triggerDownload(`plevel-history-${stamp}.json`, "application/json",
+      JSON.stringify(payload, null, 2));
+    setHistoryStatus(`Exported ${entries.length} entrie${entries.length === 1 ? "y" : "s"}`);
+  }
+
+  function clearHistory() {
+    const ok = window.confirm(
+      "Clear the local calculation history?\n\n" +
+      "This removes the aggregate snapshots from your browser. Any JSON " +
+      "or CSV files you've already downloaded are untouched."
+    );
+    if (!ok) return;
+    try { localStorage.removeItem(HISTORY_STORAGE_KEY); } catch (_) { /* */ }
+    renderHistory();
+    setHistoryStatus("History cleared");
+  }
+
+  function setHistoryStatus(msg) {
+    const el = document.getElementById("history-status");
+    if (!el) return;
+    el.textContent = msg;
+    if (msg) {
+      clearTimeout(setHistoryStatus._t);
+      setHistoryStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
     }
   }
 
@@ -411,6 +725,13 @@
     renderPrintHeader();
     renderBriefPreview(result);
 
+    // Persist an aggregate snapshot. Dedup key is (UIC, asOfDate) so
+    // re-running with tweaks during the same report period overwrites
+    // rather than stacking noise.
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    saveSnapshot(snapshotFromResult(result, unit, asOf));
+
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -454,9 +775,12 @@
     const c = result.critical;
     const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
     const asOfStr = formatDateDDMMMYY(asOfDate);
+    // Use NOUIC as the placeholder in both the brief and the filename so
+    // the S-1 can grep exports and find runs where the T/O wasn't loaded.
+    const unitUic = unit.uic || "NOUIC";
     const unitLine = unit.name
-      ? `UNIT: ${unit.uic || "[UIC NOT SET]"} - ${unit.name.toUpperCase()}`
-      : `UNIT: ${unit.uic || "[UIC NOT SET]"}`;
+      ? `UNIT: ${unitUic} - ${unit.name.toUpperCase()}`
+      : `UNIT: ${unitUic}`;
 
     const pBand = result.band.pBand;
     const cBand = result.band.cBand;
@@ -746,7 +1070,7 @@
         : `<span class="tag tag-unfilled">UNFILLED</span>`;
       const match = row.Filled
         ? matchBadge(row.FillSource, row.MatchType)
-        : "&mdash;";
+        : `<span class="muted">&mdash;</span>`;
       const filler = row.Filled
         ? `${escapeHtml(row.FillerEDIPI)} &middot; ${escapeHtml(row.FillerName)}`
         : `<span class="muted">&mdash;</span>`;
@@ -788,6 +1112,9 @@
     renderFromState();
     refreshDetectedUnit();
     $("#results-section").hidden = true;
+    const briefTa = $("#brief-textarea");
+    if (briefTa) briefTa.value = "";
+    updateBriefCount();
     setExportStatus("");
     refreshCalculateButton();
   }
@@ -868,6 +1195,12 @@
       });
     }
     if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
+
+    const histExport = document.getElementById("history-export");
+    const histClear = document.getElementById("history-clear");
+    if (histExport) histExport.addEventListener("click", exportHistoryToFile);
+    if (histClear) histClear.addEventListener("click", clearHistory);
+    renderHistory();
 
     $$('input[type="file"][data-target]').forEach((el) => {
       el.addEventListener("change", (e) => {

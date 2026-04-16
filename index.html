@@ -6,7 +6,7 @@
   <title>DRRS P-Level Calculator</title>
   <meta name="description" content="USMC Personnel Readiness (P-Level) calculator per MCO 3000.13B. Client-side only." />
   <link rel="stylesheet" href="assets/css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="assets/vendor/papaparse.min.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#upload-section">Skip to calculator</a>
@@ -51,10 +51,14 @@
         <div class="unit-actions">
           <p class="policy-hint">UIC and Unit Name are read from the T/O Structure CSV when it loads. As-Of Date is operator-supplied and auto-saved to your browser. All three stamp onto the readiness brief, JSON export, and audit CSV filename.</p>
           <div class="unit-action-row">
+            <label class="brief-toggle">
+              <input type="checkbox" id="profile-encrypt" />
+              <span>Encrypt export</span>
+            </label>
             <button id="profile-export" type="button" class="btn btn-ghost small"
                     title="Download the As-Of date and policy settings as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
             <button id="profile-import" type="button" class="btn btn-ghost small"
-                    title="Load a unit profile JSON file saved earlier">Import Profile</button>
+                    title="Load a unit profile JSON file saved earlier (encrypted or plaintext)">Import Profile</button>
             <input type="file" id="profile-import-input" accept=".json" hidden />
             <span id="profile-status" class="export-status" aria-live="polite"></span>
           </div>
@@ -247,20 +251,42 @@
         </table>
       </details>
 
-      <div class="breakdown">
-        <h3>P-Level Band Reference</h3>
-        <table class="data-table">
+    </section>
+
+    <section class="card history-card" id="history-section">
+      <div class="history-head">
+        <h2>Calculation History</h2>
+        <div class="history-actions">
+          <button id="history-export" type="button" class="btn btn-ghost small"
+                  title="Download all history entries as JSON">Export History</button>
+          <button id="history-clear" type="button" class="btn btn-ghost small"
+                  title="Clear the locally stored history">Clear</button>
+          <span id="history-status" class="export-status" aria-live="polite"></span>
+        </div>
+      </div>
+      <p class="muted small">
+        Aggregate snapshots from each Calculate. Last <strong>30</strong>
+        entries, stored in your browser. <strong>No EDIPIs or per-billet
+        detail</strong> — those live only in the per-run JSON and audit CSV
+        files you download. One entry per (UIC, as-of date).
+      </p>
+      <p class="muted small" id="history-empty" hidden>No history yet. Run a calculation to populate.</p>
+      <div class="history-table-wrap">
+        <table class="data-table" id="history-table">
           <thead>
-            <tr><th>P-Level</th><th>Personnel Strength %</th><th>Critical MOS %</th></tr>
+            <tr>
+              <th>As-Of</th>
+              <th>UIC</th>
+              <th>Unit</th>
+              <th>P-Level</th>
+              <th class="num">PS %</th>
+              <th class="num">CM %</th>
+              <th>Driver</th>
+              <th>Saved (UTC)</th>
+            </tr>
           </thead>
-          <tbody>
-            <tr><td>P-1</td><td>90 &ndash; 100</td><td>85 &ndash; 100</td></tr>
-            <tr><td>P-2</td><td>80 &ndash; 89</td><td>75 &ndash; 84</td></tr>
-            <tr><td>P-3</td><td>70 &ndash; 79</td><td>65 &ndash; 74</td></tr>
-            <tr><td>P-4</td><td>0 &ndash; 69</td><td>0 &ndash; 64</td></tr>
-          </tbody>
+          <tbody id="history-table-body"></tbody>
         </table>
-        <p class="muted small">Final P-Level = lower of the two percentages. Contractors excluded. P-6 only by HQMC PP&amp;O direction.</p>
       </div>
     </section>
 
@@ -585,6 +611,26 @@
               title="Clear the browser-side copy of the unit profile and any cached data">Wipe Local Data</button>
     </div>
   </footer>
+
+  <dialog id="passphrase-dialog" class="modal">
+    <form method="dialog" class="modal-form">
+      <h3 id="passphrase-title">Enter passphrase</h3>
+      <p class="muted small" id="passphrase-hint"></p>
+      <label class="modal-field">
+        <span>Passphrase</span>
+        <input type="password" id="passphrase-input" autocomplete="off" />
+      </label>
+      <label class="modal-field" id="passphrase-confirm-wrap" hidden>
+        <span>Confirm</span>
+        <input type="password" id="passphrase-confirm" autocomplete="off" />
+      </label>
+      <p class="error small" id="passphrase-error" hidden></p>
+      <div class="modal-actions">
+        <button type="submit" value="ok" class="btn btn-primary small">OK</button>
+        <button type="submit" value="cancel" class="btn btn-ghost small">Cancel</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="assets/js/parser.js"></script>
   <script src="assets/js/calculator.js"></script>

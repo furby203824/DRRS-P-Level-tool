@@ -50,7 +50,8 @@
     critical: null,
     lastResult: null,
     validation: { roster: null, structure: null, critical: null }, // {errors, warnings}
-    detectedUnit: { uic: "", name: "" }
+    detectedUnit: { uic: "", name: "" },
+    mosmerge: null  // optional MOS roster for EDIPI merge
   };
 
   // ---- DOM helpers ------------------------------------------------------
@@ -464,6 +465,94 @@
         <td class="muted small">${escapeHtml(savedLabel)}Z</td>`;
       body.appendChild(tr);
     }
+    renderTrendChart(entries);
+  }
+
+  // ---- Trend chart (Chart.js) ------------------------------------------
+  var _trendChart = null;
+  function renderTrendChart(entries) {
+    const wrap = document.getElementById("trend-chart-wrap");
+    const canvas = document.getElementById("trend-chart");
+    if (!wrap || !canvas || typeof Chart === "undefined") return;
+    if (entries.length < 2) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+
+    // Sort oldest-first for the chart x-axis.
+    const sorted = entries.slice().sort(function (a, b) {
+      return (a.asOfDate || "").localeCompare(b.asOfDate || "");
+    });
+    const labels = sorted.map(function (e) {
+      return formatDateDDMMMYY(parseAsOfDate(e.asOfDate) || new Date(e.savedAt));
+    });
+    const psPcts = sorted.map(function (e) { return e.result.personnel.pct; });
+    const cmPcts = sorted.map(function (e) { return e.result.critical.pct; });
+    const pLevels = sorted.map(function (e) { return e.result.finalBand; });
+
+    if (_trendChart) _trendChart.destroy();
+    _trendChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "PS %",
+            data: psPcts,
+            borderColor: "#1f3a5f",
+            backgroundColor: "#1f3a5f22",
+            tension: 0.2,
+            yAxisID: "y"
+          },
+          {
+            label: "CM %",
+            data: cmPcts,
+            borderColor: "#cf9d2b",
+            backgroundColor: "#cf9d2b22",
+            tension: 0.2,
+            yAxisID: "y"
+          },
+          {
+            label: "P-Level",
+            data: pLevels,
+            borderColor: "#a52929",
+            borderDash: [5, 3],
+            pointStyle: "rectRot",
+            tension: 0,
+            yAxisID: "y1"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: {
+            title: { display: true, text: "Percentage" },
+            min: 0, max: 100,
+            grid: { color: "#e0e0e0" }
+          },
+          y1: {
+            title: { display: true, text: "P-Level (1=best)" },
+            position: "right",
+            min: 1, max: 4,
+            reverse: true,
+            ticks: { stepSize: 1, callback: function (v) { return "P-" + v; } },
+            grid: { drawOnChartArea: false }
+          }
+        },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                if (ctx.dataset.label === "P-Level") return "P-" + ctx.parsed.y;
+                return ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1) + "%";
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   function exportHistoryToFile() {
@@ -575,12 +664,53 @@
     $("#calculate").disabled = !(state.roster && state.structure && state.critical);
   }
 
+  // Merge MOS data from a separate file onto the roster by EDIPI.
+  function mergeEDIPIMOS(roster, mosRows) {
+    if (!mosRows || !mosRows.length) return roster;
+    const mosMap = {};
+    for (const row of mosRows) {
+      const edipi = (row.EDIPI || "").trim();
+      if (edipi) {
+        mosMap[edipi] = {
+          BMOS: (row.BMOS || "").trim(),
+          PMOS: (row.PMOS || "").trim()
+        };
+      }
+    }
+    let merged = 0;
+    const result = roster.map(function (m) {
+      const edipi = (m.EDIPI || "").trim();
+      const mos = mosMap[edipi];
+      if (mos && (!m.BMOS || !m.PMOS)) {
+        m.BMOS = m.BMOS || mos.BMOS;
+        m.PMOS = m.PMOS || mos.PMOS;
+        merged++;
+      }
+      return m;
+    });
+    return result;
+  }
+
   // ---- File handling ----------------------------------------------------
   async function handleFile(kind, file) {
     if (!file) return;
     setSlotStatus(kind, `Parsing ${file.name}...`);
     try {
       let rows = await parser.parseCSV(file);
+
+      // Handle the MOS merge file — store it and report, skip validation.
+      if (kind === "mosmerge") {
+        state.mosmerge = rows;
+        const hasEDIPI = rows.length > 0 && rows[0].EDIPI !== undefined;
+        const hasBMOS = rows.length > 0 && rows[0].BMOS !== undefined;
+        if (!hasEDIPI || !hasBMOS) {
+          setSlotStatus(kind, "Needs EDIPI + BMOS columns", false);
+          state.mosmerge = null;
+        } else {
+          setSlotStatus(kind, `${file.name} -- ${rows.length} rows (merge by EDIPI)`, true);
+        }
+        return;
+      }
 
       // If this is a roster and it lacks DRRSStatus, run the mapper.
       if (kind === "roster" && rows.length > 0 && mapper.needsMapping(Object.keys(rows[0]))) {
@@ -695,6 +825,7 @@
     if (kind === "roster") return parser.normalizeRoster(rows);
     if (kind === "structure") return parser.normalizeStructure(rows);
     if (kind === "critical") return parser.normalizeCritical(rows);
+    if (kind === "mosmerge") return rows; // raw rows, merged by EDIPI later
     return rows;
   }
 
@@ -879,9 +1010,10 @@
       `${c.pct.toFixed(1)}% (${c.filled}/${c.authorized} billets). ` +
       `Binding: ${driverShort}.`;
 
-    const reasonCode = suggestReasonCode(result);
+    const reasonCode = opts.reasonCodeOverride || suggestReasonCode(result);
+    const isSuggested = !opts.reasonCodeOverride;
     const reasonLine = reasonCode
-      ? `REASON CODE (SUGGESTED): ${reasonCode}`
+      ? `REASON CODE${isSuggested ? " (SUGGESTED)" : ""}: ${reasonCode}`
       : `REASON CODE: N/A (P-1)`;
 
     const policyLine = result.options.countLimitedAsNonDeployable
@@ -1024,7 +1156,20 @@
     if (!ta) return;
     const unit = readUnitProfile();
     const asOf = parseAsOfDate(unit.asOf) || new Date();
-    ta.value = buildReadinessBrief(result, unit, asOf, new Date());
+
+    // Set the reason code dropdown to the auto-suggested value, unless
+    // the user already manually selected one.
+    const rcSelect = $("#reason-code");
+    if (rcSelect && !rcSelect.dataset.userSet) {
+      const autoCode = suggestReasonCode(result);
+      rcSelect.value = autoCode || "N/A";
+    }
+    const reasonOverride = rcSelect && rcSelect.value && rcSelect.value !== ""
+      ? rcSelect.value : null;
+
+    ta.value = buildReadinessBrief(result, unit, asOf, new Date(), {
+      reasonCodeOverride: reasonOverride
+    });
     updateBriefCount();
   }
 
@@ -1224,8 +1369,8 @@
         slot.classList.remove("drag-over");
         const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (!file) return;
-        if (!/\.csv$/i.test(file.name)) {
-          setSlotStatus(kind, `Not a .csv file: ${file.name}`, false);
+        if (!/\.(csv|xlsx?)$/i.test(file.name)) {
+          setSlotStatus(kind, `Not a CSV or XLSX file: ${file.name}`, false);
           return;
         }
         // Sync the hidden input so the form reflects the chosen file.
@@ -1313,8 +1458,16 @@
         const options = {
           countLimitedAsNonDeployable: $("#policy-limited").checked
         };
+        // Apply MOS merge if a separate MOS roster was uploaded.
+        let rosterForCalc = state.roster;
+        if (state.mosmerge && state.mosmerge.length) {
+          rosterForCalc = mergeEDIPIMOS(
+            rosterForCalc.map(function (r) { var o = {}; for (var k in r) o[k] = r[k]; return o; }),
+            state.mosmerge
+          );
+        }
         const result = calculator.calculate(
-          state.roster, state.structure, state.critical, options
+          rosterForCalc, state.structure, state.critical, options
         );
         renderResults(result);
       } catch (err) {
@@ -1334,7 +1487,15 @@
     const regenBtn = document.getElementById("brief-regen");
     if (briefTa) briefTa.addEventListener("input", updateBriefCount);
     if (drrsReady) drrsReady.addEventListener("change", updateBriefCount);
+    const rcSelect = document.getElementById("reason-code");
+    if (rcSelect) {
+      rcSelect.addEventListener("change", function () {
+        rcSelect.dataset.userSet = rcSelect.value ? "true" : "";
+        if (state.lastResult) renderBriefPreview(state.lastResult);
+      });
+    }
     if (regenBtn) regenBtn.addEventListener("click", () => {
+      if (rcSelect) { rcSelect.dataset.userSet = ""; rcSelect.value = ""; }
       if (state.lastResult) renderBriefPreview(state.lastResult);
     });
   }

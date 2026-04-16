@@ -7,6 +7,8 @@
   <meta name="description" content="USMC Personnel Readiness (P-Level) calculator per MCO 3000.13B. Client-side only." />
   <link rel="stylesheet" href="assets/css/styles.css" />
   <script src="assets/vendor/papaparse.min.js"></script>
+  <script src="assets/vendor/xlsx.mini.min.js"></script>
+  <script src="assets/vendor/chart.umd.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#upload-section">Skip to calculator</a>
@@ -69,24 +71,43 @@
         <label class="slot" data-slot="roster">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
-          <input type="file" accept=".csv" data-target="roster" aria-describedby="status-roster" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="roster" aria-describedby="status-roster" />
           <div class="slot-status" id="status-roster" data-status="roster" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
         <label class="slot" data-slot="structure">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
-          <input type="file" accept=".csv" data-target="structure" aria-describedby="status-structure" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="structure" aria-describedby="status-structure" />
           <div class="slot-status" id="status-structure" data-status="structure" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
         <label class="slot" data-slot="critical">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
-          <input type="file" accept=".csv" data-target="critical" aria-describedby="status-critical" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="critical" aria-describedby="status-critical" />
           <div class="slot-status" id="status-critical" data-status="critical" aria-live="polite">Drop CSV or click to browse</div>
         </label>
       </div>
+
+      <details class="mos-merge-block" id="mos-merge-section">
+        <summary class="muted small">
+          Optional: MOS Roster (if alpha roster lacks BMOS / PMOS columns)
+        </summary>
+        <p class="muted small">
+          Upload a MCTFS or OneSource export with EDIPI + BMOS + PMOS columns.
+          The tool will merge MOS data onto the alpha roster by EDIPI, enabling
+          the Critical MOS calculation.
+        </p>
+        <div class="upload-grid" style="grid-template-columns: 1fr;">
+          <label class="slot" data-slot="mosmerge">
+            <div class="slot-title">MOS Roster (EDIPI + BMOS + PMOS)</div>
+            <div class="slot-sub">Merged onto the alpha roster by EDIPI</div>
+            <input type="file" accept=".csv,.xlsx,.xls" data-target="mosmerge" aria-describedby="status-mosmerge" />
+            <div class="slot-status" id="status-mosmerge" data-status="mosmerge" aria-live="polite">Drop CSV or click to browse</div>
+          </label>
+        </div>
+      </details>
 
       <div class="actions">
         <button id="load-sample" class="btn btn-secondary" type="button">Load Sample Data</button>
@@ -213,7 +234,22 @@
         <div class="brief-controls">
           <label class="brief-toggle">
             <input type="checkbox" id="drrs-ready" checked />
-            <span>DRRS-Ready (strip smart quotes, dashes, non-ASCII)</span>
+            <span>DRRS-Ready</span>
+          </label>
+          <label class="brief-toggle">
+            <span class="unit-label">Reason Code</span>
+            <select id="reason-code" class="reason-select">
+              <option value="">(auto from calc)</option>
+              <option value="S-MANPOWER">S-MANPOWER</option>
+              <option value="S-MOS-QUAL">S-MOS-QUAL</option>
+              <option value="S-PERSTAT">S-PERSTAT</option>
+              <option value="S-BIC">S-BIC</option>
+              <option value="S-RET-EAS">S-RET-EAS</option>
+              <option value="S-MED-DENTAL">S-MED-DENTAL</option>
+              <option value="S-ADMIN-SEP">S-ADMIN-SEP</option>
+              <option value="S-TRAINING">S-TRAINING</option>
+              <option value="N/A">N/A (P-1)</option>
+            </select>
           </label>
           <button id="brief-regen" type="button" class="btn btn-ghost small">Regenerate</button>
           <div id="brief-count-container" class="brief-count" aria-live="polite">
@@ -295,6 +331,9 @@
         files you download. One entry per (UIC, as-of date).
       </p>
       <p class="muted small" id="history-empty" hidden>No history yet. Run a calculation to populate.</p>
+      <div id="trend-chart-wrap" class="trend-chart-wrap" hidden>
+        <canvas id="trend-chart" height="200"></canvas>
+      </div>
       <div class="history-table-wrap">
         <table class="data-table" id="history-table">
           <thead>

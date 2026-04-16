@@ -26,6 +26,10 @@ window.PLevel = window.PLevel || {};
   };
 
   function parseCSV(file) {
+    // Handle XLSX files via SheetJS — convert first sheet to JSON rows.
+    if (/\.xlsx?$/i.test(file.name) && typeof XLSX !== "undefined") {
+      return parseXLSX(file);
+    }
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: true,
@@ -41,6 +45,31 @@ window.PLevel = window.PLevel || {};
         },
         error: (err) => reject(err)
       });
+    });
+  }
+
+  function parseXLSX(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = function () {
+        try {
+          const wb = XLSX.read(reader.result, { type: "array" });
+          const sheetName = wb.SheetNames[0];
+          if (!sheetName) return reject(new Error("XLSX file has no sheets"));
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+          // Ensure all values are strings (SheetJS may return numbers).
+          const stringRows = rows.map(function (row) {
+            var out = {};
+            for (var k in row) out[k.trim()] = String(row[k]).trim();
+            return out;
+          });
+          resolve(stringRows);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = function () { reject(new Error("Could not read " + file.name)); };
+      reader.readAsArrayBuffer(file);
     });
   }
 

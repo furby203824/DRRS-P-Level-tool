@@ -671,6 +671,15 @@ html, body {
   cursor: pointer;
 }
 .brief-toggle input { accent-color: var(--accent); }
+.reason-select {
+  font: inherit;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
 .brief-count {
   margin-left: auto;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -745,6 +754,10 @@ html, body {
 .tag-p3 { background: var(--p3); color: #fff; border-color: var(--p3); }
 .tag-p4 { background: var(--p4); color: #fff; border-color: var(--p4); }
 
+.trend-chart-wrap {
+  margin: 14px 0 8px;
+  max-height: 220px;
+}
 @media print { .history-card { display: none !important; } }
 
 /* Passphrase modal dialog */

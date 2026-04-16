@@ -249,6 +249,43 @@
 
     </section>
 
+    <section class="card history-card" id="history-section">
+      <div class="history-head">
+        <h2>Calculation History</h2>
+        <div class="history-actions">
+          <button id="history-export" type="button" class="btn btn-ghost small"
+                  title="Download all history entries as JSON">Export History</button>
+          <button id="history-clear" type="button" class="btn btn-ghost small"
+                  title="Clear the locally stored history">Clear</button>
+          <span id="history-status" class="export-status" aria-live="polite"></span>
+        </div>
+      </div>
+      <p class="muted small">
+        Aggregate snapshots from each Calculate. Last <strong>30</strong>
+        entries, stored in your browser. <strong>No EDIPIs or per-billet
+        detail</strong> — those live only in the per-run JSON and audit CSV
+        files you download. One entry per (UIC, as-of date).
+      </p>
+      <p class="muted small" id="history-empty" hidden>No history yet. Run a calculation to populate.</p>
+      <div class="history-table-wrap">
+        <table class="data-table" id="history-table">
+          <thead>
+            <tr>
+              <th>As-Of</th>
+              <th>UIC</th>
+              <th>Unit</th>
+              <th>P-Level</th>
+              <th class="num">PS %</th>
+              <th class="num">CM %</th>
+              <th>Driver</th>
+              <th>Saved (UTC)</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card methodology" id="methodology-section">
       <div class="methodology-head">
         <h2>Methodology</h2>

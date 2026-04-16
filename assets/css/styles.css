@@ -716,6 +716,37 @@ html, body {
   .brief-block { display: none !important; }
 }
 
+/* Calculation history */
+.history-card h2 { margin: 0; font-size: 17px; }
+.history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.history-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.history-table-wrap { overflow-x: auto; }
+#history-table { font-size: 12.5px; }
+#history-table td { padding: 6px 8px; }
+#history-table tr.history-row { border-left: 3px solid transparent; }
+#history-table tr.history-p1 { border-left-color: var(--p1); }
+#history-table tr.history-p2 { border-left-color: var(--p2); }
+#history-table tr.history-p3 { border-left-color: var(--p3); }
+#history-table tr.history-p4 { border-left-color: var(--p4); }
+.tag-p1 { background: var(--p1); color: #fff; border-color: var(--p1); }
+.tag-p2 { background: var(--p2); color: #fff; border-color: var(--p2); }
+.tag-p3 { background: var(--p3); color: #fff; border-color: var(--p3); }
+.tag-p4 { background: var(--p4); color: #fff; border-color: var(--p4); }
+
+@media print { .history-card { display: none !important; } }
+
 /* Print-only header (hidden on screen) */
 .print-header { display: none; }
 

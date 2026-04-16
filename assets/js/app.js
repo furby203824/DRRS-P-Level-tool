@@ -22,6 +22,13 @@
   // future schema change can migrate or discard old data cleanly.
   const PROFILE_STORAGE_KEY = "drrs-plevel.unitProfile.v1";
 
+  // History of aggregate calculation snapshots. Deliberately excludes
+  // per-billet audit data (EDIPIs / names) -- those stay only in
+  // per-run exports. History is for trend visualization and
+  // "on this date, this UIC was P-X" lookups.
+  const HISTORY_STORAGE_KEY = "drrs-plevel.history.v1";
+  const HISTORY_MAX_ENTRIES = 30;
+
   // Placeholder text the S-1 overwrites in the brief textarea before copy.
   const ACTIONS_PLACEHOLDER =
     "[S-1 to fill: manning requests submitted, recruiting pipeline engagement, " +
@@ -167,13 +174,15 @@
 
   function wipeLocalData() {
     const ok = window.confirm(
-      "Wipe locally stored unit profile and any other cached data for this tool?\n\n" +
+      "Wipe locally stored unit profile, calculation history, and any " +
+      "other cached data for this tool?\n\n" +
       "This clears the browser-side copy only (data never left your machine). " +
       "CSV files you've loaded this session will also be cleared."
     );
     if (!ok) return;
     try {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch (_) { /* */ }
     // Reset operator-supplied fields and in-memory state. UIC / Unit
     // Name are derived from the CSV and cleared by reset() below.
@@ -190,6 +199,152 @@
     if (msg) {
       clearTimeout(setProfileStatus._t);
       setProfileStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
+    }
+  }
+
+  // ---- History persistence (aggregate metrics only) -------------------
+  function loadHistoryFromStorage() {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return [];
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    } catch (_) { return []; }
+  }
+
+  function writeHistoryToStorage(entries) {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
+    } catch (_) { /* quota or privacy mode: silently skip */ }
+  }
+
+  function snapshotFromResult(result, unit, asOfDate) {
+    const p = result.personnel;
+    const c = result.critical;
+    return {
+      savedAt: new Date().toISOString(),
+      asOfDate: unit.asOf || todayISODate(),
+      unit: { uic: unit.uic || "NOUIC", name: unit.name || "" },
+      result: {
+        pLevel: result.pLevel,
+        finalBand: result.band.finalBand,
+        pBand: result.band.pBand,
+        cBand: result.band.cBand,
+        driver: result.band.driver,
+        personnel: {
+          pct: p.pct,
+          effective: p.effective,
+          authorized: p.authorized,
+          assigned: p.assigned,
+          attached: p.attached,
+          nonDeployable: p.nonDeployable,
+          limited: p.limited,
+          detached: p.detached,
+          ia: p.ia,
+          jia: p.jia
+        },
+        critical: {
+          pct: c.pct,
+          filled: c.filled,
+          authorized: c.authorized,
+          fillSummary: c.fillSummary || null
+        },
+        excludedContractors: result.excludedContractors,
+        rosterCount: result.rosterCount
+      },
+      options: result.options
+    };
+  }
+
+  // Save (or update) a snapshot for the current calc. If an entry with
+  // the same (UIC, asOfDate) already exists, replace it -- one report
+  // per period per UIC matches DRRS convention.
+  function saveSnapshot(snapshot) {
+    const entries = loadHistoryFromStorage();
+    const keyOf = (e) => `${e.unit.uic}|${e.asOfDate}`;
+    const key = keyOf(snapshot);
+    const existing = entries.findIndex((e) => keyOf(e) === key);
+    if (existing >= 0) entries[existing] = snapshot;
+    else entries.unshift(snapshot);
+    // Newest first; trim to HISTORY_MAX_ENTRIES.
+    entries.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+    if (entries.length > HISTORY_MAX_ENTRIES) entries.length = HISTORY_MAX_ENTRIES;
+    writeHistoryToStorage(entries);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const body = document.getElementById("history-table-body");
+    const wrap = document.getElementById("history-section");
+    const emptyMsg = document.getElementById("history-empty");
+    if (!body || !wrap) return;
+    const entries = loadHistoryFromStorage();
+    body.innerHTML = "";
+    if (entries.length === 0) {
+      if (emptyMsg) emptyMsg.hidden = false;
+      return;
+    }
+    if (emptyMsg) emptyMsg.hidden = true;
+    for (const e of entries) {
+      const tr = document.createElement("tr");
+      tr.classList.add("history-row", "history-p" + e.result.finalBand);
+      const asOfLabel = formatDateDDMMMYY(
+        parseAsOfDate(e.asOfDate) || new Date(e.savedAt || Date.now())
+      );
+      const savedLabel = e.savedAt
+        ? new Date(e.savedAt).toISOString().slice(0, 16).replace("T", " ")
+        : "";
+      tr.innerHTML = `
+        <td>${escapeHtml(asOfLabel)}</td>
+        <td>${escapeHtml(e.unit.uic || "NOUIC")}</td>
+        <td>${escapeHtml(e.unit.name || "")}</td>
+        <td><span class="tag tag-p${e.result.finalBand}">${escapeHtml(e.result.pLevel)}</span></td>
+        <td class="num">${e.result.personnel.pct.toFixed(1)}%</td>
+        <td class="num">${e.result.critical.pct.toFixed(1)}%</td>
+        <td class="muted small">${escapeHtml(e.result.driver || "")}</td>
+        <td class="muted small">${escapeHtml(savedLabel)}Z</td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  function exportHistoryToFile() {
+    const entries = loadHistoryFromStorage();
+    if (!entries.length) {
+      setHistoryStatus("No history to export");
+      return;
+    }
+    const payload = {
+      schema: "drrs-plevel-history.v1",
+      exportedAt: new Date().toISOString(),
+      reference: "MCO 3000.13B para 7c",
+      note: "Aggregate metrics only. No EDIPIs or per-billet detail.",
+      entries
+    };
+    const stamp = formatDateDDMMMYY(new Date()).toLowerCase();
+    triggerDownload(`plevel-history-${stamp}.json`, "application/json",
+      JSON.stringify(payload, null, 2));
+    setHistoryStatus(`Exported ${entries.length} entrie${entries.length === 1 ? "y" : "s"}`);
+  }
+
+  function clearHistory() {
+    const ok = window.confirm(
+      "Clear the local calculation history?\n\n" +
+      "This removes the aggregate snapshots from your browser. Any JSON " +
+      "or CSV files you've already downloaded are untouched."
+    );
+    if (!ok) return;
+    try { localStorage.removeItem(HISTORY_STORAGE_KEY); } catch (_) { /* */ }
+    renderHistory();
+    setHistoryStatus("History cleared");
+  }
+
+  function setHistoryStatus(msg) {
+    const el = document.getElementById("history-status");
+    if (!el) return;
+    el.textContent = msg;
+    if (msg) {
+      clearTimeout(setHistoryStatus._t);
+      setHistoryStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
     }
   }
 
@@ -410,6 +565,13 @@
     setExportStatus("");
     renderPrintHeader();
     renderBriefPreview(result);
+
+    // Persist an aggregate snapshot. Dedup key is (UIC, asOfDate) so
+    // re-running with tweaks during the same report period overwrites
+    // rather than stacking noise.
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    saveSnapshot(snapshotFromResult(result, unit, asOf));
 
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -874,6 +1036,12 @@
       });
     }
     if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
+
+    const histExport = document.getElementById("history-export");
+    const histClear = document.getElementById("history-clear");
+    if (histExport) histExport.addEventListener("click", exportHistoryToFile);
+    if (histClear) histClear.addEventListener("click", clearHistory);
+    renderHistory();
 
     $$('input[type="file"][data-target]').forEach((el) => {
       el.addEventListener("change", (e) => {

@@ -1,0 +1,23 @@
+MOS,Description,Category,UnitType
+0102,Adjutant,Officer,CLB H&S CO
+0170,Personnel Officer,Officer,CLB H&S CO
+0402,Logistics Officer,Officer,CLB H&S CO
+0430,Logistics/Embark Officer,Officer,CLB H&S CO
+0602,Communications Officer,Officer,CLB H&S CO
+3002,Ground Supply Officer,Officer,CLB H&S CO
+3510,Motor Transport Officer,Officer,CLB H&S CO
+0111,Admin Specialist,Enlisted,CLB H&S CO
+0411,Maintenance Mgmt Specialist,Enlisted,CLB H&S CO
+0431,Logistics/Embarkation Specialist,Enlisted,CLB H&S CO
+0481,Landing Support Specialist,Enlisted,CLB H&S CO
+0621,Field Radio Operator,Enlisted,CLB H&S CO
+0651,Cyber Network Operator,Enlisted,CLB H&S CO
+1141,Electrician,Enlisted,CLB H&S CO
+1345,Engineer Equipment Operator,Enlisted,CLB H&S CO
+1371,Combat Engineer,Enlisted,CLB H&S CO
+2111,Small Arms Repair,Enlisted,CLB H&S CO
+2311,Ammunition Tech,Enlisted,CLB H&S CO
+3043,Supply Admin,Enlisted,CLB H&S CO
+3531,Motor Vehicle Operator,Enlisted,CLB H&S CO
+3537,Motor Transport Operations Chief,Enlisted,CLB H&S CO
+8404,FMF Corpsman,Navy,CLB H&S CO

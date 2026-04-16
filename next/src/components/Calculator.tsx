@@ -7,7 +7,7 @@ import { calculate, type CalcResult, type RosterRow, type StructureRow, type Cri
 import { validate, normalizeRoster, normalizeStructure, normalizeCritical, SCHEMA, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
-import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle, ChevronDown } from "lucide-react";
+import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle, ChevronDown, ChevronRight } from "lucide-react";
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";
@@ -171,6 +171,9 @@ export function Calculator() {
   // Export dropdown
   const [exportOpen, setExportOpen] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Advanced section disclosure
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Export status
   const [exportMsg, setExportMsg] = useState("");
@@ -713,22 +716,36 @@ export function Calculator() {
       {/* History panel — always visible once there's at least one entry */}
       <HistoryPanel refreshKey={historyKey} />
 
-      {/* Profile actions + Wipe Local Data */}
-      <div className="mb-8 flex flex-wrap items-center gap-3 border-t border-[var(--color-elevated)] pt-4">
-        <label className="flex items-center gap-1.5 font-mono text-xs text-[var(--color-muted)]">
-          <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-[var(--color-accent)]" />
-          Encrypt export
-        </label>
-        <button onClick={doExportProfile} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
-        <button onClick={() => profileImportRef.current?.click()} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
-        <input ref={profileImportRef} type="file" accept=".json" hidden onChange={(e) => { if (e.target.files?.[0]) doImportProfile(e.target.files[0]); e.target.value = ""; }} />
-        {!wipeConfirming ? (
-          <button onClick={startWipe} className="ml-auto px-3 py-2.5 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
-        ) : (
-          <div className="ml-auto flex items-center gap-2">
-            <span className="font-mono text-xs text-[var(--color-p4)]">Are you sure?</span>
-            <button onClick={confirmWipe} className="border border-[var(--color-p4)] bg-[var(--color-p4)] px-3 py-2.5 font-mono text-xs font-bold text-white">Confirm Wipe</button>
-            <button onClick={cancelWipe} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Cancel</button>
+      {/* Advanced options + Wipe Local Data */}
+      <div className="mb-8 border-t border-[var(--color-elevated)] pt-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setAdvancedOpen((o) => !o)}
+            className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+            aria-expanded={advancedOpen}
+          >
+            {advancedOpen ? <ChevronDown size={14} strokeWidth={1.5} /> : <ChevronRight size={14} strokeWidth={1.5} />}
+            Advanced
+          </button>
+          {!wipeConfirming ? (
+            <button onClick={startWipe} className="ml-auto px-3 py-2.5 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
+          ) : (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="font-mono text-xs text-[var(--color-p4)]">Are you sure?</span>
+              <button onClick={confirmWipe} className="border border-[var(--color-p4)] bg-[var(--color-p4)] px-3 py-2.5 font-mono text-xs font-bold text-white">Confirm Wipe</button>
+              <button onClick={cancelWipe} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Cancel</button>
+            </div>
+          )}
+        </div>
+        {advancedOpen && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--color-elevated)] pt-3">
+            <label className="flex items-center gap-1.5 font-mono text-xs text-[var(--color-muted)]">
+              <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-[var(--color-accent)]" />
+              Encrypt export
+            </label>
+            <button onClick={doExportProfile} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
+            <button onClick={() => profileImportRef.current?.click()} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
+            <input ref={profileImportRef} type="file" accept=".json" hidden onChange={(e) => { if (e.target.files?.[0]) doImportProfile(e.target.files[0]); e.target.value = ""; }} />
           </div>
         )}
       </div>

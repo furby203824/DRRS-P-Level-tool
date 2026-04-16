@@ -28,6 +28,15 @@
   --color-accent-strong: #b45309;/* amber-700 */
   --color-accent-hi: #fbbf24;    /* amber-400 */
   --color-accent-head: #f59e0b;  /* amber-500 */
+  --color-accent-bg: #78350f;    /* amber-900  — primary button background */
+  --color-accent-bg-hover: #92400e; /* amber-800 — primary button hover */
+  --color-accent-ink: #fef3c7;   /* amber-100  — primary button text */
+  --color-accent-tint: #451a03;  /* amber-950  — filled-state bg, use with /20 */
+
+  /* Error / validation feedback */
+  --color-error: #ef4444;        /* red-500  — error icons and text */
+  --color-error-hi: #f87171;     /* red-400  — lighter error text */
+  --color-error-tint: #450a0a;   /* red-950  — error bg base, use with /10 */
 
   /* Readiness band semantics (mil-spec ordering) */
   --color-p1: #15803d;           /* emerald-700 */

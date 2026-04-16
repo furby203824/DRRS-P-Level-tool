@@ -181,6 +181,132 @@ const blocks: Block[] = [
     ),
   },
   {
+    num: "09", title: "Data Classification Reference",
+    content: (
+      <>
+        <p className="text-xs text-[var(--color-body)]">
+          CUI/PII determination for every data field in the application schema per DoDI 5200.48, 32 CFR Part 2002, and DoDI 5400.11. This analysis applies to the <strong>synthetic sample data</strong> shipped with the PoC. If real data is loaded, re-evaluate immediately.
+        </p>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Alpha Roster Fields</div>
+        <div className="mt-1 overflow-x-auto">
+          <table className="w-full text-xs"><thead>
+            <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
+              <th className="py-1 pr-3">Field</th><th className="py-1 pr-3">CUI</th><th className="py-1 pr-3">PII</th><th className="py-1">Notes</th>
+            </tr>
+          </thead><tbody>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">EDIPI</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-p3)]">Sensitive (if real)</td><td className="text-[var(--color-mute-2)]">Synthetic: prefixed 99. Real EDIPIs are linkable to identity.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">LastName / FirstName / MI</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-p2)]">Non-Sensitive</td><td className="text-[var(--color-mute-2)]">Synthetic placeholders. Real names alone are Non-Sensitive PII per DoDI 5400.11.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">Rank / PayGrade / Service / Component</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Organizational attributes, not individually identifying.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">Sex</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-p2)]">Non-Sensitive (if combined)</td><td className="text-[var(--color-mute-2)]">Alone: not identifying. Combined with name + unit: linkable.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">Unit / UnitName / ParentUIC</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Organizational identifiers.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">BIC / BMOS / PMOS / BilletTitle</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Billet and qualification codes.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">Category / DutyStatus / DLC</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Status and limitation codes.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">DRRSStatus / DeployableFlag</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Readiness status codes.</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">EAS / EDD</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-p2)]">Non-Sensitive (if real)</td><td className="text-[var(--color-mute-2)]">Dates combined with name become linkable PII.</td></tr>
+            <tr><td className="py-1 pr-3 font-mono text-[var(--color-accent)]">Location / StartDate / EndDate / AttachedFromUIC / DetachedToUIC / IAJIATasking</td><td className="pr-3 text-[var(--color-body)]">No</td><td className="pr-3 text-[var(--color-body)]">Not PII</td><td className="text-[var(--color-mute-2)]">Organizational / movement data.</td></tr>
+          </tbody></table>
+        </div>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">T/O Structure &amp; Critical MOS Fields</div>
+        <p className="mt-1 text-xs text-[var(--color-body)]">
+          All fields (Unit, UnitName, BMOS, PayGrade, Authorized, BilletDescription, MOS, Description, Category, UnitType) &mdash; <strong>No CUI, No PII</strong>. Organizational T/O and reference data only.
+        </p>
+
+        <div className="mt-4 border-l-4 border-[var(--color-p1)] bg-[var(--color-p1)]/10 px-3 py-2 text-xs text-[var(--color-body)]">
+          <strong>PoC Determination:</strong> With synthetic data (EDIPIs prefixed 99, placeholder names), zero fields contain real CUI or real PII. If an operator loads a real alpha roster, fields EDIPI, LastName, FirstName, MI, Sex, EAS, and EDD become PII. At that point the system crosses the PoC boundary.
+        </div>
+      </>
+    ),
+  },
+  {
+    num: "10", title: "Data Schema Provenance",
+    content: (
+      <>
+        <p className="text-xs text-[var(--color-body)]">
+          Per DD Form 2875 instructions and DoDI 8500.01, the highest-risk compliance question for this application is whether the data schema was derived from a DoD Information System accessed under a SAAR.
+        </p>
+
+        <div className="mt-3 border-l-4 border-[var(--color-p3)] bg-[var(--color-p3)]/10 px-3 py-2">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-p3)]">Status: Undetermined</div>
+          <p className="mt-1 text-xs text-[var(--color-body)]">
+            The application schema uses field names consistent with AAA (Cognos) and TFSMS exports (e.g., EDIPI, BMOS, PMOS, PayGrade, DRRSStatus). Whether the schema was independently designed using publicly available MCO 3000.13B definitions, or was derived from direct access to a DoD IS under a DD Form 2875, has not been formally determined in writing.
+          </p>
+        </div>
+
+        <div className="mt-3 text-xs text-[var(--color-body)]">
+          <strong>Required action:</strong> Obtain a written determination from qualified legal counsel (JAG) before any transition to real data or real users. For PoC purposes with synthetic data only, development may continue.
+        </div>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Determination Record (fill when obtained)</div>
+        <table className="mt-1 w-full text-xs"><tbody>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Determination</td><td className="text-[var(--color-mute-2)]">Clean / Flagged / Undetermined</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Authority</td><td className="text-[var(--color-mute-2)]">Name, position, date</td></tr>
+          <tr><td className="py-1 pr-4 font-bold text-[var(--color-accent)]">Basis</td><td className="text-[var(--color-mute-2)]">Summary of reasoning</td></tr>
+        </tbody></table>
+
+        <p className="mt-3 text-xs text-[var(--color-muted)]">
+          Reference: DD Form 2875 Instructions (2020 revision), DoDI 8500.01 Section 2, SYSTEM PROMPT Part 2 Item 2.
+        </p>
+      </>
+    ),
+  },
+  {
+    num: "11", title: "Additional Compliance Domains",
+    content: (
+      <>
+        <p className="text-xs text-[var(--color-body)]">
+          Compliance domains beyond NIST SP 800-171r3 that apply to any DoD-affiliated application, including PoC systems.
+        </p>
+
+        <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Accessibility (Section 508 / WCAG 2.1)</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">Authority: Section 508 of the Rehabilitation Act; 36 CFR Part 1194; DoDI 8500.01 Section 3.</p>
+        <table className="mt-1 w-full text-xs"><tbody>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Skip-to-content link</td><td className="font-bold text-[var(--color-p1)]">Implemented</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Semantic HTML (headings, landmarks, fieldsets, labels)</td><td className="font-bold text-[var(--color-p1)]">Implemented</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">ARIA live regions on dynamic status elements</td><td className="font-bold text-[var(--color-p1)]">Implemented</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Keyboard navigability (standard HTML form controls)</td><td className="font-bold text-[var(--color-p1)]">Implemented</td></tr>
+          <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-4 text-[var(--color-body)]">Band colors supplemented by text labels (not color-only)</td><td className="font-bold text-[var(--color-p1)]">Implemented</td></tr>
+          <tr><td className="py-1 pr-4 text-[var(--color-body)]">Formal VPAT (Voluntary Product Accessibility Template)</td><td className="font-bold text-[var(--color-p3)]">Not yet completed</td></tr>
+        </tbody></table>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">CMMC 2.0 Awareness</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">Authority: 32 CFR Part 170 (CMMC Final Rule, Dec 2024); DFARS 252.204-7021.</p>
+        <p className="mt-1 text-xs text-[var(--color-body)]">
+          Not applicable if developed by uniformed personnel or government civilians. If development is transferred to a DoD contractor, CMMC Level 2 certification may be required. CMMC Level 2 maps to NIST SP 800-171r2 (note: r2, not r3).
+        </p>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Records Management</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">Authority: 44 U.S.C. Chapter 31; 36 CFR Chapter XII; DoD 5015.02-STD.</p>
+        <p className="mt-1 text-xs text-[var(--color-body)]">
+          Exported artifacts (JSON snapshots, PDF briefs, XLSX workbooks, audit CSVs) created by government personnel in official duties are federal records subject to retention schedules and disposition authority. This app does not manage retention &mdash; operators must follow Component records management guidance for readiness reporting artifacts.
+        </p>
+
+        <div className="mt-4 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Software Supply Chain</div>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">Authority: DoDI 8500.01; NIST SP 800-53r5 SA-12; EO 14028.</p>
+        <div className="mt-1 overflow-x-auto">
+          <table className="w-full text-xs"><thead>
+            <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]">
+              <th className="py-1 pr-3">Library</th><th className="py-1 pr-3">Version</th><th className="py-1 pr-3">Purpose</th><th className="py-1">License</th>
+            </tr>
+          </thead><tbody>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">PapaParse</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">5.5.3</td><td className="pr-3 text-[var(--color-mute-2)]">CSV parsing</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">SheetJS (xlsx)</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">0.18.5</td><td className="pr-3 text-[var(--color-mute-2)]">XLSX export</td><td className="text-[var(--color-mute-2)]">Apache-2.0</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">Chart.js</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">bundled</td><td className="pr-3 text-[var(--color-mute-2)]">Trend chart</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">jsPDF</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">4.2.1</td><td className="pr-3 text-[var(--color-mute-2)]">PDF export</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">jsPDF-AutoTable</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">5.0.7</td><td className="pr-3 text-[var(--color-mute-2)]">PDF table layout</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">Lucide React</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">1.8.0</td><td className="pr-3 text-[var(--color-mute-2)]">Icons</td><td className="text-[var(--color-mute-2)]">ISC</td></tr>
+            <tr className="border-b border-[var(--color-elevated)]"><td className="py-1 pr-3 text-[var(--color-body)]">Next.js</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">16.2.4</td><td className="pr-3 text-[var(--color-mute-2)]">Framework (static export)</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+            <tr><td className="py-1 pr-3 text-[var(--color-body)]">React</td><td className="pr-3 font-mono text-[var(--color-ink-soft)]">19.2.4</td><td className="pr-3 text-[var(--color-mute-2)]">UI library</td><td className="text-[var(--color-mute-2)]">MIT</td></tr>
+          </tbody></table>
+        </div>
+        <p className="mt-2 text-xs text-[var(--color-muted)]">
+          Dependencies pinned in package-lock.json. If the tool transitions to a program of record, a formal SBOM (SPDX or CycloneDX) is required per EO 14028.
+        </p>
+      </>
+    ),
+  },
+  {
     num: "\u00A7", title: "Source Documents",
     content: (
       <ul className="ml-4 list-disc space-y-1 text-xs text-[var(--color-body)]">

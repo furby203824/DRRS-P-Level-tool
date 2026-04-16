@@ -609,6 +609,75 @@ html, body {
   font-size: 12px;
 }
 
+/* DRRS Remarks brief editor */
+.brief-block {
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+.brief-block h3 { margin-top: 0; }
+.brief-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.brief-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.brief-toggle input { accent-color: var(--accent); }
+.brief-count {
+  margin-left: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  display: inline-flex;
+  gap: 4px;
+}
+.brief-count.over-limit {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: #fbf0f0;
+  font-weight: 600;
+}
+.brief-count-sep { color: var(--muted); }
+.brief-textarea {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  resize: vertical;
+  tab-size: 2;
+}
+.brief-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Print: brief block hidden on paper -- it's an operator tool, not the
+   artifact. The structured tables below are the printable output. */
+@media print {
+  .brief-block { display: none !important; }
+}
+
 /* Print-only header (hidden on screen) */
 .print-header { display: none; }
 

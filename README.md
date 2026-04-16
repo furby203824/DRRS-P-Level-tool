@@ -26,7 +26,9 @@ python3 -m http.server 8000
 
 ## Inputs
 
-Three CSVs per the schema in `SCHEMA.pdf`:
+Three CSVs per the schema in [`SCHEMA.md`](SCHEMA.md) (markdown mirror of
+`SCHEMA.pdf` with the calculation reference reconciled to match the
+implementation):
 
 | File | Source | Description |
 | --- | --- | --- |
@@ -58,7 +60,8 @@ assets/
   js/parser.js       -- CSV parsing + schema validation
   js/calculator.js   -- P-Level math (MCO 3000.13B para 7c)
   js/app.js          -- UI wiring
-SCHEMA.pdf           -- Data contract for the three CSVs
+SCHEMA.md            -- Data contract for the three CSVs (greppable)
+SCHEMA.pdf           -- Original data contract PDF
 generate alpha roster.pdf  -- Source of the sample data generator
 alpha roster example.csv
 to structure example.csv

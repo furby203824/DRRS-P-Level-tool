@@ -7,7 +7,7 @@ import { calculate, type CalcResult, type RosterRow, type StructureRow, type Cri
 import { validate, normalizeRoster, normalizeStructure, normalizeCritical, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
-import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download } from "lucide-react";
+import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download, Shuffle } from "lucide-react";
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";
@@ -17,6 +17,7 @@ import { saveSnapshot, snapshotFromResult } from "@/lib/history";
 import { exportPDF, exportXLSX } from "@/lib/exports";
 import { loadProfile, saveProfile, clearProfile, encryptProfile, decryptProfile, CRYPTO_MIN_PASSPHRASE, PROFILE_KEY, type ProfileData, type EncryptedEnvelope } from "@/lib/persistence";
 import { HISTORY_STORAGE_KEY, clearHistory as clearHistoryStorage } from "@/lib/history";
+import { generateUnit } from "@/lib/generate";
 
 // ---------------------------------------------------------------------------
 // Sample CSV paths (relative to basePath, served from public/samples/)
@@ -236,6 +237,18 @@ export function Calculator() {
     }
   }, []);
 
+  // Generate random synthetic unit
+  const loadRandom = useCallback(() => {
+    const unit = generateUnit();
+    setRoster(unit.roster);
+    setStructure(unit.structure);
+    setCritical(unit.critical);
+    setValidation({ roster: null, structure: null, critical: null });
+    setDetectedUnit({ uic: unit.uic, name: unit.unitName });
+    setResult(null);
+    setBriefText("");
+  }, []);
+
   // Calculate
   const canCalculate = Boolean(roster && structure && critical);
 
@@ -409,6 +422,10 @@ export function Calculator() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button onClick={loadSample} className="border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
             Load Sample Data
+          </button>
+          <button onClick={loadRandom} className="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-elevated)] px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-body)] hover:bg-[var(--color-border)]">
+            <Shuffle size={12} strokeWidth={1.5} />
+            Random Unit
           </button>
           <button onClick={doCalculate} disabled={!canCalculate} className="flex items-center gap-1.5 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)] disabled:cursor-not-allowed disabled:opacity-40">
             <CalcIcon size={14} strokeWidth={1.5} />

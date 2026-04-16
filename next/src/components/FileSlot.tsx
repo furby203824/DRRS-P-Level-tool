@@ -66,7 +66,7 @@ export function FileSlot({ title, subtitle, accept = ".csv", rowCount, expectedC
 
   const borderCls =
     slotState === "loaded"
-      ? "border-[var(--color-accent)] border-solid bg-[var(--color-accent-tint)]/20"
+      ? "border-[var(--color-accent)] border-solid border-l-4 border-l-[var(--color-accent)] bg-[var(--color-accent-tint)]/30"
       : slotState === "error"
         ? "border-[var(--color-p4)] border-solid bg-[var(--color-error-tint)]/10"
         : slotState === "dragover"

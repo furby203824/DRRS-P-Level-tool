@@ -10,7 +10,7 @@ export function MetricRow({ label, value, accent = false, className = "" }: Prop
     <div
       className={`
         flex justify-between items-baseline
-        border-b border-[var(--color-elevated)] py-2
+        border-b border-[var(--color-elevated)] py-2.5
         ${className}
       `.trim()}
     >

@@ -268,9 +268,22 @@
 
     state.lastResult = result;
     setExportStatus("");
+    renderPrintHeader();
 
     $("#results-section").hidden = false;
     $("#results-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderPrintHeader() {
+    const unit = readUnitProfile();
+    const asOf = parseAsOfDate(unit.asOf) || new Date();
+    const unitLabel = unit.uic
+      ? unit.name ? `${unit.uic} — ${unit.name}` : unit.uic
+      : "[UIC NOT SET]";
+    $("#print-unit").textContent = unitLabel;
+    $("#print-asof").textContent = formatDateDDMMMYY(asOf);
+    $("#print-now").textContent = formatDateDDMMMYY(new Date()) + " " +
+      new Date().toTimeString().slice(0, 5);
   }
 
   // ---- Export ----------------------------------------------------------

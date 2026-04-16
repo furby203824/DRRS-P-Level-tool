@@ -609,6 +609,9 @@ html, body {
   font-size: 12px;
 }
 
+/* Print-only header (hidden on screen) */
+.print-header { display: none; }
+
 /* Results head (title + citation chip + export actions) */
 .results-head {
   display: flex;
@@ -771,4 +774,130 @@ html, body {
   .band-grid, .example-grid { grid-template-columns: 1fr; }
   .rule-list { grid-template-columns: 1fr; gap: 2px 0; }
   .rule-list dt { margin-top: 8px; }
+}
+
+/* ---- Print --------------------------------------------------------------
+   Produce a signable paper artifact of the Results + Per-Billet Audit
+   Trail. Hides the upload card, methodology, and site chrome. Forces the
+   audit <details> to render expanded. Neutralizes colors that don't print
+   well and strips backgrounds. */
+@media print {
+  @page { margin: 0.5in; }
+  html, body { background: #fff; color: #000; font-size: 11pt; }
+  .site-header, .site-footer, .header-nav, .banner.opsec,
+  #upload-section, #methodology-section,
+  .results-actions, .skip-link { display: none !important; }
+
+  .wrap { max-width: none; padding: 0; }
+  main.wrap { margin: 0; }
+
+  .print-header {
+    display: block !important;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 6pt;
+    margin-bottom: 10pt;
+  }
+  .print-title {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13pt;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+  .print-meta {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9pt;
+    margin-top: 4pt;
+    display: flex;
+    gap: 18pt;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 0 12pt;
+    background: #fff;
+    page-break-inside: avoid;
+  }
+  .card h2, .card h3 { color: #000; }
+
+  /* Let the results head wrap naturally without the action bar. */
+  .results-head { margin-bottom: 6pt; }
+  .results-head h2 { font-size: 16pt; }
+  .cite-chip {
+    background: #fff;
+    border: 1px solid #000;
+    color: #000;
+  }
+
+  /* P-Level card and metric cards: flatten to black-on-white with a
+     visible border so the color coding survives monochrome printers. */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10pt;
+    page-break-inside: avoid;
+  }
+  .plevel-card, .metric-card {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1.5pt solid #000;
+    padding: 10pt;
+  }
+  .plevel-card .plevel-label,
+  .plevel-card .plevel-driver { color: #000 !important; }
+  .plevel-value { font-size: 42pt; line-height: 1; }
+  .plevel-card.p1 { border-left: 6pt solid #1f7a3a; }
+  .plevel-card.p2 { border-left: 6pt solid #4f8b1f; }
+  .plevel-card.p3 { border-left: 6pt solid #b06a00; }
+  .plevel-card.p4 { border-left: 6pt solid #a52929; }
+
+  .formula {
+    background: #fff !important;
+    border-left: 2pt solid #000;
+    padding: 6pt 8pt;
+  }
+  .formula.final { border-left-color: #000; }
+
+  /* Tables: tighter, everything visible, no row hover. */
+  .data-table { font-size: 9pt; page-break-inside: auto; }
+  .data-table th, .data-table td { padding: 3pt 5pt; border-bottom: 0.5pt solid #000; }
+  .data-table th { background: #fff !important; color: #000; border-bottom: 1pt solid #000; }
+  .data-table tbody tr:hover { background: transparent; }
+  .data-table tr { page-break-inside: avoid; }
+
+  /* Force the per-billet audit <details> open on print. */
+  details.audit,
+  details.audit[open] { display: block !important; }
+  details.audit > summary { list-style: none; }
+  details.audit > summary::before { content: ""; }
+  details.audit > *:not(summary) { display: block !important; }
+  details.audit:not([open]) > *:not(summary) { display: block !important; }
+
+  /* Tags: print as outlined rectangles, not colored fills. */
+  .tag {
+    background: #fff !important;
+    color: #000 !important;
+    border: 0.5pt solid #000 !important;
+  }
+  #cm-audit-table tr.row-unfilled { background: transparent; }
+  #cm-audit-table tr.row-unfilled td:first-child::before {
+    content: "\25CF ";
+    color: #000;
+  }
+
+  /* Export status + buttons already hidden via .results-actions. */
+  .export-status { display: none; }
+
+  /* Print-only footer on the results card. */
+  #results-section::after {
+    content: "DRRS P-Level Calculator POC -- Ref: MCO 3000.13B para 7c -- Synthetic sample data only (EDIPIs prefixed 99)";
+    display: block;
+    margin-top: 10pt;
+    font-size: 8pt;
+    color: #000;
+    border-top: 0.5pt solid #000;
+    padding-top: 4pt;
+  }
 }

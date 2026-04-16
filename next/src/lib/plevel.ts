@@ -239,6 +239,8 @@ interface InternalBillet {
   MOS: string;
   PayGrade: string;
   Description: string;
+  Unit: string;
+  seq: number;
   filledBy: number | null;
   fillSource: FillSource | null;
   matchType: MatchType | null;
@@ -255,13 +257,17 @@ function calculateCriticalMOS(
 
   // Expand authorized billets.
   const billets: InternalBillet[] = [];
+  let billetSeq = 0;
   for (const s of structure) {
     if (criticalMosSet.has(s.BMOS)) {
       for (let i = 0; i < s.Authorized; i++) {
+        billetSeq++;
         billets.push({
           MOS: s.BMOS,
           PayGrade: s.PayGrade,
           Description: descByMos[s.BMOS] ?? "",
+          Unit: s.Unit,
+          seq: billetSeq,
           filledBy: null,
           fillSource: null,
           matchType: null,
@@ -321,7 +327,7 @@ function calculateCriticalMOS(
         MOS: b.MOS,
         Description: b.Description,
         AuthorizedPayGrade: b.PayGrade,
-        BIC: filler?.BIC ?? "",
+        BIC: filler?.BIC || `${b.Unit}${b.MOS}${b.PayGrade}${String(b.seq).padStart(3, "0")}`.slice(0, 13),
         Filled: filler !== null,
         FillerEDIPI: filler?.EDIPI ?? "",
         FillerName: filler

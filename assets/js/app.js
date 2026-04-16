@@ -29,6 +29,14 @@
   const HISTORY_STORAGE_KEY = "drrs-plevel.history.v1";
   const HISTORY_MAX_ENTRIES = 30;
 
+  // Web Crypto parameters for encrypted profile export (AES-256-GCM
+  // over PBKDF2-SHA256 derived from a user passphrase). OWASP 2023
+  // guidance is 600,000 PBKDF2-SHA256 iterations minimum.
+  const CRYPTO_PBKDF2_ITERATIONS = 600000;
+  const CRYPTO_SALT_BYTES = 16;
+  const CRYPTO_IV_BYTES = 12;
+  const CRYPTO_MIN_PASSPHRASE = 8;
+
   // Placeholder text the S-1 overwrites in the brief textarea before copy.
   const ACTIONS_PLACEHOLDER =
     "[S-1 to fill: manning requests submitted, recruiting pipeline engagement, " +
@@ -143,32 +151,183 @@
     } catch (_) { return false; }
   }
 
-  function exportProfileToFile() {
-    const profile = currentProfileObject();
+  // ---- Web Crypto helpers (AES-256-GCM + PBKDF2-SHA256) ---------------
+  function b64encode(buf) {
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+  }
+  function b64decode(str) {
+    return Uint8Array.from(atob(str), function (c) { return c.charCodeAt(0); });
+  }
+
+  async function deriveKey(passphrase, salt) {
+    var enc = new TextEncoder();
+    var keyMaterial = await crypto.subtle.importKey(
+      "raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: salt, iterations: CRYPTO_PBKDF2_ITERATIONS, hash: "SHA-256" },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptPayload(plainObj, passphrase) {
+    var salt = crypto.getRandomValues(new Uint8Array(CRYPTO_SALT_BYTES));
+    var iv = crypto.getRandomValues(new Uint8Array(CRYPTO_IV_BYTES));
+    var key = await deriveKey(passphrase, salt);
+    var pt = new TextEncoder().encode(JSON.stringify(plainObj));
+    var ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, pt);
+    return {
+      schema: "drrs-plevel-unit-profile.v2",
+      encrypted: true,
+      cipher: "AES-GCM-256",
+      kdf: "PBKDF2-SHA256",
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      salt: b64encode(salt),
+      iv: b64encode(iv),
+      ciphertext: b64encode(ct),
+      exportedAt: new Date().toISOString()
+    };
+  }
+
+  async function decryptPayload(envelope, passphrase) {
+    var salt = b64decode(envelope.salt);
+    var iv = b64decode(envelope.iv);
+    var ct = b64decode(envelope.ciphertext);
+    var key = await deriveKey(passphrase, salt);
+    var pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ct);
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
+  // ---- Passphrase dialog (uses native <dialog>) -----------------------
+  function promptForPassphrase(mode) {
+    // mode: "encrypt" (show confirm field, validate length) or "decrypt"
+    return new Promise(function (resolve) {
+      var dlg = document.getElementById("passphrase-dialog");
+      if (!dlg || typeof dlg.showModal !== "function") {
+        // Fallback for extremely old browsers: use window.prompt.
+        var p = window.prompt(
+          mode === "encrypt"
+            ? "Pick a passphrase for encryption (min 8 chars):"
+            : "Enter passphrase to decrypt:"
+        );
+        resolve(p || null);
+        return;
+      }
+      var form = dlg.querySelector("form");
+      var title = document.getElementById("passphrase-title");
+      var hint = document.getElementById("passphrase-hint");
+      var input = document.getElementById("passphrase-input");
+      var confirmLabel = document.getElementById("passphrase-confirm-wrap");
+      var confirmInput = document.getElementById("passphrase-confirm");
+      var errEl = document.getElementById("passphrase-error");
+
+      input.value = "";
+      if (confirmInput) confirmInput.value = "";
+      errEl.hidden = true;
+      errEl.textContent = "";
+
+      if (mode === "encrypt") {
+        title.textContent = "Encrypt unit profile";
+        hint.textContent = "Pick a passphrase. You\u2019ll need the same one to import. Minimum 8 characters. If lost, the file cannot be recovered.";
+        if (confirmLabel) confirmLabel.hidden = false;
+      } else {
+        title.textContent = "Decrypt unit profile";
+        hint.textContent = "Enter the passphrase used when this file was exported.";
+        if (confirmLabel) confirmLabel.hidden = true;
+      }
+
+      function cleanup() {
+        form.removeEventListener("submit", onSubmit);
+      }
+      function showError(msg) {
+        errEl.textContent = msg;
+        errEl.hidden = false;
+      }
+      function onSubmit(e) {
+        e.preventDefault();
+        var submitter = e.submitter;
+        if (submitter && submitter.value === "cancel") {
+          cleanup(); dlg.close(); resolve(null); return;
+        }
+        var pass = input.value;
+        if (mode === "encrypt") {
+          if (pass.length < CRYPTO_MIN_PASSPHRASE) {
+            showError("Minimum " + CRYPTO_MIN_PASSPHRASE + " characters.");
+            return;
+          }
+          if (confirmInput && pass !== confirmInput.value) {
+            showError("Passphrases do not match.");
+            return;
+          }
+        } else {
+          if (!pass) { showError("Passphrase is required."); return; }
+        }
+        cleanup(); dlg.close(); resolve(pass);
+      }
+      form.addEventListener("submit", onSubmit);
+      dlg.showModal();
+      input.focus();
+    });
+  }
+
+  // ---- Profile export / import (with optional encryption) -------------
+  async function exportProfileToFile() {
+    var profile = currentProfileObject();
     profile.exportedAt = new Date().toISOString();
     profile.schema = "drrs-plevel-unit-profile.v1";
-    const content = JSON.stringify(profile, null, 2);
-    // Filename reflects the detected UIC if a CSV is loaded; falls back
-    // to NOUIC so the operator still gets a working download.
-    const uicPart = sanitizeForFilename(state.detectedUnit.uic);
-    triggerDownload(`unit-profile-${uicPart}.json`, "application/json", content);
-    setProfileStatus("Profile exported");
+    var encrypt = $("#profile-encrypt") && $("#profile-encrypt").checked;
+    var uicPart = sanitizeForFilename(state.detectedUnit.uic);
+    if (encrypt) {
+      var pass = await promptForPassphrase("encrypt");
+      if (!pass) { setProfileStatus("Export cancelled"); return; }
+      try {
+        var encrypted = await encryptPayload(profile, pass);
+        triggerDownload(
+          "unit-profile-" + uicPart + ".enc.json",
+          "application/json",
+          JSON.stringify(encrypted, null, 2)
+        );
+        setProfileStatus("Encrypted profile exported");
+      } catch (err) {
+        setProfileStatus("Encryption failed: " + err.message);
+      }
+    } else {
+      triggerDownload(
+        "unit-profile-" + uicPart + ".json",
+        "application/json",
+        JSON.stringify(profile, null, 2)
+      );
+      setProfileStatus("Profile exported (plaintext)");
+    }
   }
 
   function importProfileFromFile(file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+    var reader = new FileReader();
+    reader.onload = async function () {
       try {
-        const data = JSON.parse(reader.result);
+        var data = JSON.parse(reader.result);
+        if (data.encrypted === true) {
+          var pass = await promptForPassphrase("decrypt");
+          if (!pass) { setProfileStatus("Import cancelled"); return; }
+          try {
+            data = await decryptPayload(data, pass);
+          } catch (err) {
+            setProfileStatus("Decryption failed \u2014 wrong passphrase or corrupted file.");
+            return;
+          }
+        }
         applyProfileObject(data);
         saveProfileToStorage();
-        setProfileStatus(`Profile loaded from ${file.name}`);
+        setProfileStatus("Profile loaded from " + file.name);
       } catch (err) {
         setProfileStatus("Import failed: " + err.message);
       }
     };
-    reader.onerror = () => setProfileStatus("Could not read " + file.name);
+    reader.onerror = function () { setProfileStatus("Could not read " + file.name); };
     reader.readAsText(file);
   }
 

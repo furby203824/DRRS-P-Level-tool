@@ -747,6 +747,63 @@ html, body {
 
 @media print { .history-card { display: none !important; } }
 
+/* Passphrase modal dialog */
+.modal {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  padding: 0;
+  max-width: 400px;
+  width: 90%;
+}
+.modal::backdrop {
+  background: rgba(20,32,44,.45);
+}
+.modal-form {
+  padding: 20px 22px;
+}
+.modal-form h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--ink);
+}
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+.modal-field span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.modal-field input {
+  font: inherit;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+}
+.modal-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+.modal-form .error {
+  color: var(--bad);
+  margin-top: 8px;
+}
+
 /* Print-only header (hidden on screen) */
 .print-header { display: none; }
 

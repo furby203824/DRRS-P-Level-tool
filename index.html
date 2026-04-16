@@ -51,10 +51,14 @@
         <div class="unit-actions">
           <p class="policy-hint">UIC and Unit Name are read from the T/O Structure CSV when it loads. As-Of Date is operator-supplied and auto-saved to your browser. All three stamp onto the readiness brief, JSON export, and audit CSV filename.</p>
           <div class="unit-action-row">
+            <label class="brief-toggle">
+              <input type="checkbox" id="profile-encrypt" />
+              <span>Encrypt export</span>
+            </label>
             <button id="profile-export" type="button" class="btn btn-ghost small"
                     title="Download the As-Of date and policy settings as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
             <button id="profile-import" type="button" class="btn btn-ghost small"
-                    title="Load a unit profile JSON file saved earlier">Import Profile</button>
+                    title="Load a unit profile JSON file saved earlier (encrypted or plaintext)">Import Profile</button>
             <input type="file" id="profile-import-input" accept=".json" hidden />
             <span id="profile-status" class="export-status" aria-live="polite"></span>
           </div>
@@ -607,6 +611,26 @@
               title="Clear the browser-side copy of the unit profile and any cached data">Wipe Local Data</button>
     </div>
   </footer>
+
+  <dialog id="passphrase-dialog" class="modal">
+    <form method="dialog" class="modal-form">
+      <h3 id="passphrase-title">Enter passphrase</h3>
+      <p class="muted small" id="passphrase-hint"></p>
+      <label class="modal-field">
+        <span>Passphrase</span>
+        <input type="password" id="passphrase-input" autocomplete="off" />
+      </label>
+      <label class="modal-field" id="passphrase-confirm-wrap" hidden>
+        <span>Confirm</span>
+        <input type="password" id="passphrase-confirm" autocomplete="off" />
+      </label>
+      <p class="error small" id="passphrase-error" hidden></p>
+      <div class="modal-actions">
+        <button type="submit" value="ok" class="btn btn-primary small">OK</button>
+        <button type="submit" value="cancel" class="btn btn-ghost small">Cancel</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="assets/js/parser.js"></script>
   <script src="assets/js/calculator.js"></script>

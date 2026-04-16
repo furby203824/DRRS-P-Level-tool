@@ -454,9 +454,12 @@
     const c = result.critical;
     const s = c.fillSummary || { exactBMOS: 0, flexBMOS: 0, exactPMOS: 0, flexPMOS: 0, unfilled: 0 };
     const asOfStr = formatDateDDMMMYY(asOfDate);
+    // Use NOUIC as the placeholder in both the brief and the filename so
+    // the S-1 can grep exports and find runs where the T/O wasn't loaded.
+    const unitUic = unit.uic || "NOUIC";
     const unitLine = unit.name
-      ? `UNIT: ${unit.uic || "[UIC NOT SET]"} - ${unit.name.toUpperCase()}`
-      : `UNIT: ${unit.uic || "[UIC NOT SET]"}`;
+      ? `UNIT: ${unitUic} - ${unit.name.toUpperCase()}`
+      : `UNIT: ${unitUic}`;
 
     const pBand = result.band.pBand;
     const cBand = result.band.cBand;
@@ -746,7 +749,7 @@
         : `<span class="tag tag-unfilled">UNFILLED</span>`;
       const match = row.Filled
         ? matchBadge(row.FillSource, row.MatchType)
-        : "&mdash;";
+        : `<span class="muted">&mdash;</span>`;
       const filler = row.Filled
         ? `${escapeHtml(row.FillerEDIPI)} &middot; ${escapeHtml(row.FillerName)}`
         : `<span class="muted">&mdash;</span>`;
@@ -788,6 +791,9 @@
     renderFromState();
     refreshDetectedUnit();
     $("#results-section").hidden = true;
+    const briefTa = $("#brief-textarea");
+    if (briefTa) briefTa.value = "";
+    updateBriefCount();
     setExportStatus("");
     refreshCalculateButton();
   }

@@ -48,7 +48,17 @@
             <input type="date" id="unit-asof" />
           </label>
         </div>
-        <p class="policy-hint">Stamped onto the readiness brief, JSON export, and audit CSV filename. Defaults to today's date.</p>
+        <div class="unit-actions">
+          <p class="policy-hint">Auto-saved to your browser. Stamped onto the readiness brief, JSON export, and audit CSV filename.</p>
+          <div class="unit-action-row">
+            <button id="profile-export" type="button" class="btn btn-ghost small"
+                    title="Download the unit profile as a JSON file (for SharePoint or USB transfer)">Export Profile</button>
+            <button id="profile-import" type="button" class="btn btn-ghost small"
+                    title="Load a unit profile JSON file saved earlier">Import Profile</button>
+            <input type="file" id="profile-import-input" accept=".json" hidden />
+            <span id="profile-status" class="export-status" aria-live="polite"></span>
+          </div>
+        </div>
       </fieldset>
 
       <div class="upload-grid" role="group" aria-label="CSV upload slots">
@@ -567,10 +577,12 @@
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">
+    <div class="wrap footer-row">
       <p class="small muted">
         Implements MCO 3000.13B para 7c. Synthetic sample data only &mdash; EDIPIs prefixed <code>99</code>.
       </p>
+      <button id="wipe-local-data" type="button" class="btn btn-ghost small"
+              title="Clear the browser-side copy of the unit profile and any cached data">Wipe Local Data</button>
     </div>
   </footer>
 

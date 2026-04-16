@@ -18,6 +18,10 @@
   // when over so the S-1 sees it before pasting.
   const DRRS_REMARKS_LIMIT = 2000;
 
+  // LocalStorage key for the persisted Unit Profile. Versioned so a
+  // future schema change can migrate or discard old data cleanly.
+  const PROFILE_STORAGE_KEY = "drrs-plevel.unitProfile.v1";
+
   // Placeholder text the S-1 overwrites in the brief textarea before copy.
   const ACTIONS_PLACEHOLDER =
     "[S-1 to fill: manning requests submitted, recruiting pipeline engagement, " +
@@ -61,6 +65,101 @@
 
   function sanitizeForFilename(s) {
     return (s || "").replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 16) || "NOUIC";
+  }
+
+  // ---- Unit Profile persistence ---------------------------------------
+  function currentProfileObject() {
+    return {
+      uic: ($("#unit-uic") && $("#unit-uic").value) || "",
+      name: ($("#unit-name") && $("#unit-name").value) || "",
+      asOf: ($("#unit-asof") && $("#unit-asof").value) || "",
+      policy: {
+        countLimitedAsNonDeployable:
+          $("#policy-limited") ? $("#policy-limited").checked : true
+      }
+    };
+  }
+
+  function applyProfileObject(p) {
+    if (!p || typeof p !== "object") return;
+    if (typeof p.uic === "string" && $("#unit-uic")) $("#unit-uic").value = p.uic;
+    if (typeof p.name === "string" && $("#unit-name")) $("#unit-name").value = p.name;
+    if (typeof p.asOf === "string" && $("#unit-asof")) $("#unit-asof").value = p.asOf;
+    if (p.policy && typeof p.policy.countLimitedAsNonDeployable === "boolean" && $("#policy-limited")) {
+      $("#policy-limited").checked = p.policy.countLimitedAsNonDeployable;
+    }
+  }
+
+  function saveProfileToStorage() {
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(currentProfileObject()));
+    } catch (_) { /* quota or privacy mode: silently skip */ }
+  }
+
+  function loadProfileFromStorage() {
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (!raw) return false;
+      const p = JSON.parse(raw);
+      applyProfileObject(p);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function exportProfileToFile() {
+    const profile = currentProfileObject();
+    profile.exportedAt = new Date().toISOString();
+    profile.schema = "drrs-plevel-unit-profile.v1";
+    const content = JSON.stringify(profile, null, 2);
+    const uicPart = sanitizeForFilename(profile.uic);
+    triggerDownload(`unit-profile-${uicPart}.json`, "application/json", content);
+    setProfileStatus("Profile exported");
+  }
+
+  function importProfileFromFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        applyProfileObject(data);
+        saveProfileToStorage();
+        setProfileStatus(`Profile loaded from ${file.name}`);
+      } catch (err) {
+        setProfileStatus("Import failed: " + err.message);
+      }
+    };
+    reader.onerror = () => setProfileStatus("Could not read " + file.name);
+    reader.readAsText(file);
+  }
+
+  function wipeLocalData() {
+    const ok = window.confirm(
+      "Wipe locally stored unit profile and any other cached data for this tool?\n\n" +
+      "This clears the browser-side copy only (data never left your machine). " +
+      "CSV files you've loaded this session will also be cleared."
+    );
+    if (!ok) return;
+    try {
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
+    } catch (_) { /* */ }
+    // Reset the unit profile fields and in-memory state.
+    if ($("#unit-uic")) $("#unit-uic").value = "";
+    if ($("#unit-name")) $("#unit-name").value = "";
+    if ($("#unit-asof")) $("#unit-asof").value = todayISODate();
+    if ($("#policy-limited")) $("#policy-limited").checked = true;
+    reset();
+    setProfileStatus("Local data wiped");
+  }
+
+  function setProfileStatus(msg) {
+    const el = document.getElementById("profile-status");
+    if (!el) return;
+    el.textContent = msg;
+    if (msg) {
+      clearTimeout(setProfileStatus._t);
+      setProfileStatus._t = setTimeout(() => { el.textContent = ""; }, 2500);
+    }
   }
 
   function setSlotStatus(kind, status, ok) {
@@ -712,9 +811,33 @@
 
   // ---- Wire it up ------------------------------------------------------
   function init() {
-    // Default the as-of date to today.
+    // Default the as-of date to today, then overlay any stored profile.
     const asofInput = $("#unit-asof");
     if (asofInput && !asofInput.value) asofInput.value = todayISODate();
+    loadProfileFromStorage();
+
+    // Auto-save unit profile fields on change.
+    ["unit-uic", "unit-name", "unit-asof"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", saveProfileToStorage);
+    });
+    const policyEl = document.getElementById("policy-limited");
+    if (policyEl) policyEl.addEventListener("change", saveProfileToStorage);
+
+    // Profile export / import / wipe controls.
+    const exportBtn = document.getElementById("profile-export");
+    const importBtn = document.getElementById("profile-import");
+    const importInput = document.getElementById("profile-import-input");
+    const wipeBtn = document.getElementById("wipe-local-data");
+    if (exportBtn) exportBtn.addEventListener("click", exportProfileToFile);
+    if (importBtn && importInput) {
+      importBtn.addEventListener("click", () => importInput.click());
+      importInput.addEventListener("change", (e) => {
+        importProfileFromFile(e.target.files[0]);
+        importInput.value = ""; // allow re-selecting same file
+      });
+    }
+    if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
 
     $$('input[type="file"][data-target]').forEach((el) => {
       el.addEventListener("change", (e) => {

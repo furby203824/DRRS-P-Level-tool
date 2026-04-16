@@ -81,6 +81,14 @@ html, body {
   padding: 18px 0 30px;
   border-top: 1px solid var(--border);
 }
+.site-footer .footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.site-footer .footer-row p { margin: 0; }
 
 /* Banner */
 .banner {
@@ -165,6 +173,21 @@ html, body {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.unit-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.unit-actions .policy-hint { margin: 0; max-width: 60ch; }
+.unit-action-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Upload slots */

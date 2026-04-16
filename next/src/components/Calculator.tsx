@@ -97,7 +97,7 @@ async function fetchSampleCSV(path: string): Promise<Record<string, string>[]> {
 function buildAuditCSV(result: CalcResult): string {
   const audit = result.critical.audit;
   const header = [
-    "MOS", "Description", "AuthorizedPayGrade", "Status",
+    "MOS", "Description", "AuthorizedPayGrade", "BIC", "Status",
     "FillerEDIPI", "FillerName", "FillerPayGrade",
     "FillerBMOS", "FillerPMOS", "FillSource", "MatchType",
   ];
@@ -110,7 +110,7 @@ function buildAuditCSV(result: CalcResult): string {
   for (const row of audit) {
     lines.push(
       [
-        row.MOS, row.Description, row.AuthorizedPayGrade,
+        row.MOS, row.Description, row.AuthorizedPayGrade, row.BIC,
         row.Filled ? "FILLED" : "UNFILLED",
         row.FillerEDIPI, row.FillerName, row.FillerPayGrade,
         row.FillerBMOS, row.FillerPMOS,
@@ -466,8 +466,6 @@ export function Calculator() {
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={copyBrief} className="flex items-center gap-1 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-2 py-1 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Copy size={12} strokeWidth={1.5} /> Copy Brief</button>
               <button onClick={downloadPDF} className="flex items-center gap-1 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-2 py-1 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Download size={12} strokeWidth={1.5} /> PDF</button>
-              <button onClick={downloadXLSX} className="flex items-center gap-1 border border-[var(--color-accent-strong)] bg-[var(--color-accent-bg)] px-2 py-1 font-mono text-xs text-[var(--color-accent-ink)] hover:bg-[var(--color-accent-bg-hover)]"><Download size={12} strokeWidth={1.5} /> XLSX</button>
-              <button onClick={downloadJSON} className="flex items-center gap-1 border border-[var(--color-border)] bg-[var(--color-elevated)] px-2 py-1 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]"><Download size={12} strokeWidth={1.5} /> JSON</button>
               <button onClick={downloadCSV} className="flex items-center gap-1 border border-[var(--color-border)] bg-[var(--color-elevated)] px-2 py-1 font-mono text-xs text-[var(--color-body)] hover:bg-[var(--color-border)]"><Download size={12} strokeWidth={1.5} /> Audit CSV</button>
               <span className="font-mono text-xs text-[var(--color-accent-head)]" aria-live="polite">{exportMsg}</span>
             </div>

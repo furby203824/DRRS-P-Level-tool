@@ -49,6 +49,7 @@ export function AuditTable({ audit }: Props) {
               <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)]">
                 <th className="py-1.5 pr-2">MOS</th>
                 <th className="py-1.5 pr-2">Auth Grade</th>
+                <th className="py-1.5 pr-2">BIC</th>
                 <th className="py-1.5 pr-2">Status</th>
                 <th className="py-1.5 pr-2">Filler (EDIPI / Name)</th>
                 <th className="py-1.5 pr-2">Grade</th>
@@ -66,6 +67,7 @@ export function AuditTable({ audit }: Props) {
                 >
                   <td className="py-1 pr-2">{row.MOS}</td>
                   <td className="py-1 pr-2">{row.AuthorizedPayGrade}</td>
+                  <td className="py-1 pr-2 text-[var(--color-muted)]">{row.BIC || "\u2014"}</td>
                   <td className="py-1 pr-2">
                     {row.Filled ? (
                       <span className="inline-block border border-emerald-700 bg-emerald-900/30 px-1.5 py-px text-emerald-400">FILLED</span>

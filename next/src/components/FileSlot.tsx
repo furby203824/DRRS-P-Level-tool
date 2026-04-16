@@ -7,12 +7,13 @@ interface Props {
   title: string;
   subtitle: string;
   accept?: string;
+  rowCount?: number;
   onFile: (file: File) => void;
 }
 
 type SlotState = "empty" | "loaded" | "error" | "dragover";
 
-export function FileSlot({ title, subtitle, accept = ".csv", onFile }: Props) {
+export function FileSlot({ title, subtitle, accept = ".csv", rowCount, onFile }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("Drop CSV or click to browse");
   const [slotState, setSlotState] = useState<SlotState>("empty");
@@ -101,6 +102,11 @@ export function FileSlot({ title, subtitle, accept = ".csv", onFile }: Props) {
       <div className={`mt-3 font-mono text-xs font-medium ${statusColor}`} aria-live="polite">
         {status}
       </div>
+      {slotState === "loaded" && rowCount != null && (
+        <div className="mt-0.5 font-mono text-xs text-[var(--color-muted)]">
+          {rowCount} rows parsed
+        </div>
+      )}
     </label>
   );
 }

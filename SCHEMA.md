@@ -129,17 +129,17 @@ Per MCO 3000.13B paragraph 7c.
 ### Personnel Strength Percentage
 
 ```
-Numerator = (Assigned + Attached) − Non-Deployable
-Denominator = Total Authorized from T/O
+Numerator = (Assigned + Attached) − (Detached + Non-Deployable + IA/JIA)
+Denominator = Structure Strength (Total Authorized from T/O)
 Percentage = Numerator / Denominator × 100
 ```
 
-Detached, IA, and JIA Marines are **not** in the subtraction term —
-their DRRSStatus places them outside the Assigned+Attached pool, so
-subtracting them again would double-count. The calculator treats
-`DeployableFlag = N` as always non-deployable. By default
-`DeployableFlag = L` (Limited Duty) is also subtracted; this is a unit
-policy toggle in the UI.
+Per MCO 3000.13B Chapter 2 and the Commander's Readiness Handbook,
+"Assigned + Attached" is the total unit headcount on books. Detached,
+Non-Deployable, and IA/JIA are subtracted from that total.
+Non-Deployable includes `DLC = N` and (per unit policy) `DLC = L`
+(Limited Duty — togglable in the UI). Whichever metric (Personnel
+Strength or Critical MOS) scores lower determines the final P-Level.
 
 ### Critical MOS Percentage
 
@@ -176,14 +176,9 @@ Final P-Level is the **lower** of the two percentages mapped against the
 band table. Contractors are excluded. P-6 only by direction of HQMC
 PP&O.
 
-### Reconciliation with the PDF
+### Note on data model
 
-The original `SCHEMA.pdf` renders the Personnel Strength numerator as:
-
-> `Numerator = (Assigned + Attached) − (Detached + Non-Deployable + IA + JIA)`
-
-And the Critical MOS numerator in parallel shape. That formulation
-double-subtracts Detached / IA / JIA, which are already excluded from
-the Assigned+Attached pool by DRRSStatus. The calculator implements the
-reconciled form above; the band table, the ±1 rule, the BMOS/PMOS
-hierarchy, and the contractor exclusion are unchanged from the PDF.
+When the roster uses DRRSStatus as a mutually exclusive classifier
+(ASSIGNED vs DETACHED), the Detached/IA/JIA counts are already absent
+from the Assigned+Attached total. The arithmetic is identical either
+way; the formula presentation above matches MCO 3000.13B as written.

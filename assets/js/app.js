@@ -993,29 +993,24 @@
     const p = result.personnel;
     const c = result.critical;
 
-    // Personnel Strength formula. Detached/IA/JIA are excluded upstream (by
-    // DRRSStatus) so they do not appear in the subtraction -- we note their
-    // counts on a separate line for audit completeness.
-    const limitedTerm = p.countLimitedAsNonDeployable
-      ? ` + ${p.limited}`
-      : "";
+    // Personnel Strength formula per MCO 3000.13B:
+    // ((Assigned + Attached) - (Detached + Non-Deployable + IA/JIA)) / Structure Strength
+    // "Assigned + Attached" = total unit headcount on books.
+    const totalOnBooks = p.assignedAttached + p.detached + p.ia + p.jia;
     const limitedLabel = p.countLimitedAsNonDeployable
       ? ` + Limited(${p.limited})`
       : "";
+    const subtractions = p.detached + p.nonDeployable + (p.limitedSubtracted || 0) + p.ia + p.jia;
     const psNumerator =
-      `Numerator = (Assigned(${p.assigned}) + Attached(${p.attached})) ` +
-      `\u2212 (NonDep(${p.nonDeployable})${limitedLabel}) = ` +
-      `${p.assignedAttached} \u2212 ${p.nonDeployable + (p.limitedSubtracted || 0)} = ${p.effective}`;
-    const psExcluded =
-      `Separately excluded by DRRSStatus: Detached(${p.detached}) + IA(${p.ia}) + JIA(${p.jia})`;
+      `Total on books = ${totalOnBooks}` +
+      `  \u2212  (Det(${p.detached}) + NonDep(${p.nonDeployable})${limitedLabel} + IA(${p.ia}) + JIA(${p.jia}))` +
+      ` = ${totalOnBooks} \u2212 ${subtractions} = ${p.effective}`;
     const psPct =
       `Percentage = ${p.effective} / ${p.authorized} = ` +
       `${p.pct.toFixed(1)}% \u2192 P-${result.band.pBand}`;
 
     $("#formula-ps-num").textContent = psNumerator;
-    // Re-purpose the second code slot to show excluded + percentage stacked.
-    $("#formula-ps-pct").innerHTML =
-      `${escapeHtml(psExcluded)}<br>${escapeHtml(psPct)}`;
+    $("#formula-ps-pct").textContent = psPct;
 
     const cmNumerator =
       `Numerator = Critical billets filled = ${c.filled}`;

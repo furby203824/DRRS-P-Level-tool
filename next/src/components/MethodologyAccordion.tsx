@@ -22,13 +22,13 @@ const blocks: Block[] = [
       <>
         <div className="my-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
           <div className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Personnel Strength</div>
-          <code className="mt-1 block font-mono text-xs text-[var(--color-ink)]">((Assigned + Attached) &minus; Non-Deployable) / T/O Authorized &times; 100</code>
+          <code className="mt-1 block font-mono text-xs text-[var(--color-ink)]">((Assigned + Attached) &minus; (Detached + Non-Deployable + IA/JIA)) / Structure Strength &times; 100</code>
         </div>
         <div className="my-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
           <div className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Critical MOS</div>
-          <code className="mt-1 block font-mono text-xs text-[var(--color-ink)]">Critical Billets Filled / Critical Billets Authorized &times; 100</code>
+          <code className="mt-1 block font-mono text-xs text-[var(--color-ink)]">((Crit Assigned + Attached) &minus; (Crit Detached + Crit Non-Dep + Crit IA/JIA)) / Crit Structure Strength &times; 100</code>
         </div>
-        <p className="text-xs text-[var(--color-muted)]">Detached, IA, and JIA Marines are already excluded by DRRSStatus (they are not in the Assigned+Attached pool), so they do not appear in the subtraction. Critical MOS numerator is computed by greedy matching (BMOS-primary then PMOS-secondary, exact grade preferred then &plusmn;1).</p>
+        <p className="text-xs text-[var(--color-muted)]">&ldquo;Assigned + Attached&rdquo; is the total unit headcount on books. Detached, Non-Deployable, and IA/JIA are subtracted from that total. Whichever metric scores lower wins. Critical MOS fill is computed by greedy matching (BMOS-primary then PMOS-secondary, exact grade preferred then &plusmn;1).</p>
       </>
     ),
   },
@@ -67,7 +67,7 @@ const blocks: Block[] = [
         <li><strong className="text-[var(--color-accent)]">Pull T/O Authorized.</strong> From TFSMS, sum all authorized billets for your UIC. Pull the critical MOS subset. Both numbers stay fixed during the report period.</li>
         <li><strong className="text-[var(--color-accent)]">Pull the Roster.</strong> From AAA via Cognos. Include detached Marines for visibility. Exclude contractors and civilians unless T/O authorizes.</li>
         <li><strong className="text-[var(--color-accent)]">Classify Each Marine.</strong> Tag with one DRRS state: ASSIGNED, ATTACHED, DETACHED, IA, or JIA. Flag deployability with DLC code.</li>
-        <li><strong className="text-[var(--color-accent)]">Compute the Numerator.</strong> (Assigned + Attached) &minus; Non-Deployable. Do not subtract Detached/IA/JIA again — they are already excluded by DRRSStatus.</li>
+        <li><strong className="text-[var(--color-accent)]">Compute the Numerator.</strong> Start with Assigned + Attached (total on books). Subtract Detached, Non-Deployable, IA, and JIA. Per MCO 3000.13B para 7c.</li>
         <li><strong className="text-[var(--color-accent)]">Divide and Multiply.</strong> Numerator / Authorized &times; 100. Repeat for Critical MOS subset.</li>
         <li><strong className="text-[var(--color-accent)]">Map to Band and Take the Lower.</strong> Your final P-Level is the lower (worse) of the two bands.</li>
       </ol>
@@ -107,12 +107,10 @@ const blocks: Block[] = [
           <div>
             <div className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Roster</div>
             <table className="mt-1 w-full font-mono text-xs"><tbody>
-              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Assigned</td><td className="text-right">45</td></tr>
-              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Attached</td><td className="text-right">3</td></tr>
+              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Assigned + Attached (total on books)</td><td className="text-right">50</td></tr>
+              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Detached</td><td className="text-right">2</td></tr>
               <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Non-Deployable (DLC=N)</td><td className="text-right">4</td></tr>
-              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Limited (DLC=L)</td><td className="text-right">0</td></tr>
-              <tr className="border-b border-[var(--color-elevated)]"><td className="py-0.5">Detached (excluded)</td><td className="text-right">2</td></tr>
-              <tr><td className="py-0.5">IA / JIA (excluded)</td><td className="text-right">0</td></tr>
+              <tr><td className="py-0.5">IA / JIA</td><td className="text-right">0</td></tr>
             </tbody></table>
           </div>
           <div>
@@ -129,7 +127,7 @@ const blocks: Block[] = [
         <div className="mt-3 space-y-2">
           <div className="border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
             <div className="font-mono text-xs uppercase text-[var(--color-muted)]">Personnel Strength</div>
-            <code className="block font-mono text-xs text-[var(--color-ink)]">Numerator = (45 + 3) &minus; 4 = 44 &rarr; 44/50 = <strong>88.0%</strong> &rarr; P-2</code>
+            <code className="block font-mono text-xs text-[var(--color-ink)]">Numerator = 50 &minus; (Det(2) + NonDep(4) + IA/JIA(0)) = 50 &minus; 6 = 44 &rarr; 44/50 = <strong>88.0%</strong> &rarr; P-2</code>
           </div>
           <div className="border-l-2 border-[var(--color-accent)] bg-[var(--color-bg)] p-3">
             <div className="font-mono text-xs uppercase text-[var(--color-muted)]">Critical MOS</div>

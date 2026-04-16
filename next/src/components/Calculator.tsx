@@ -161,6 +161,13 @@ export function Calculator() {
   // Profile encrypt toggle
   const [encryptExport, setEncryptExport] = useState(false);
 
+  // Two-step wipe confirmation
+  const [wipeConfirming, setWipeConfirming] = useState(false);
+  const wipeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Track whether the user has manually edited the brief
+  const briefEdited = useRef(false);
+
   // Export status
   const [exportMsg, setExportMsg] = useState("");
   const exportTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -262,10 +269,11 @@ export function Calculator() {
     });
     setResult(res);
 
-    // Generate the brief
+    // Generate the brief (and reset edit tracking)
     const unit = { uic: detectedUnit.uic, name: detectedUnit.name, asOf: asOfDate };
     const asOf = parseAsOfDate(asOfDate) ?? new Date();
     setBriefText(buildReadinessBrief(res, unit, asOf, new Date()));
+    briefEdited.current = false;
 
     // Save aggregate snapshot to history
     saveSnapshot(snapshotFromResult(res, unit, asOfDate || todayISO()));
@@ -381,8 +389,20 @@ export function Calculator() {
     reader.readAsText(file);
   }, []);
 
-  const doWipe = useCallback(() => {
-    if (!confirm("Wipe locally stored unit profile, calculation history, and session data?")) return;
+  const startWipe = useCallback(() => {
+    setWipeConfirming(true);
+    clearTimeout(wipeTimer.current);
+    wipeTimer.current = setTimeout(() => setWipeConfirming(false), 5000);
+  }, []);
+
+  const cancelWipe = useCallback(() => {
+    clearTimeout(wipeTimer.current);
+    setWipeConfirming(false);
+  }, []);
+
+  const confirmWipe = useCallback(() => {
+    clearTimeout(wipeTimer.current);
+    setWipeConfirming(false);
     clearProfile();
     clearHistoryStorage();
     doReset();
@@ -588,9 +608,11 @@ export function Calculator() {
               <button
                 onClick={() => {
                   if (!result) return;
+                  if (briefEdited.current && !confirm("Brief has been edited. Regenerate and discard changes?")) return;
                   const unit = { uic: detectedUnit.uic, name: detectedUnit.name, asOf: asOfDate };
                   const asOf = parseAsOfDate(asOfDate) ?? new Date();
                   setBriefText(buildReadinessBrief(result, unit, asOf, new Date()));
+                  briefEdited.current = false;
                 }}
                 className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]"
               >
@@ -603,7 +625,7 @@ export function Calculator() {
             <textarea
               ref={briefRef}
               value={briefText}
-              onChange={(e) => setBriefText(e.target.value)}
+              onChange={(e) => { setBriefText(e.target.value); briefEdited.current = true; }}
               rows={16}
               className="mt-2 block w-full resize-y border border-[var(--color-border)] bg-[var(--color-surface)] p-3 font-mono text-xs leading-relaxed text-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none"
               aria-label="Readiness brief, editable before copy"
@@ -663,7 +685,15 @@ export function Calculator() {
         <button onClick={doExportProfile} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
         <button onClick={() => profileImportRef.current?.click()} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
         <input ref={profileImportRef} type="file" accept=".json" hidden onChange={(e) => { if (e.target.files?.[0]) doImportProfile(e.target.files[0]); e.target.value = ""; }} />
-        <button onClick={doWipe} className="ml-auto px-3 py-2.5 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
+        {!wipeConfirming ? (
+          <button onClick={startWipe} className="ml-auto px-3 py-2.5 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
+        ) : (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="font-mono text-xs text-[var(--color-p4)]">Are you sure?</span>
+            <button onClick={confirmWipe} className="border border-[var(--color-p4)] bg-[var(--color-p4)] px-3 py-2.5 font-mono text-xs font-bold text-white">Confirm Wipe</button>
+            <button onClick={cancelWipe} className="px-3 py-2.5 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Cancel</button>
+          </div>
+        )}
       </div>
     </>
   );

@@ -9,6 +9,13 @@ export default function Home() {
     <main id="main" className="flex-1">
       <ClassificationBanner />
 
+      {/* OPSEC Banner — per SYSTEM PROMPT Part 8.1 */}
+      <div className="border-b border-[var(--color-accent-strong)] bg-[var(--color-accent-tint)] px-6 py-2 text-center font-mono text-xs text-[var(--color-accent-hi)]">
+        <strong>OPSEC:</strong> All processing happens in your browser. Nothing is
+        uploaded to a server. Do not load real PII into this POC without an
+        approved hosting decision.
+      </div>
+
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="mb-8 border-b border-[var(--color-elevated)] pb-6">
           <p className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
@@ -39,6 +46,10 @@ export default function Home() {
 
         <footer className="mt-8 border-t border-[var(--color-elevated)] pt-4 text-xs text-[var(--color-mute-2)]">
           <p className="font-mono">
+            Implements MCO 3000.13B para 7c. Synthetic sample data only &mdash;
+            EDIPIs prefixed <code className="text-[var(--color-muted)]">99</code>.
+          </p>
+          <p className="mt-1 font-mono">
             Static export. No server. No telemetry. Data never leaves the browser.
           </p>
         </footer>

@@ -10,6 +10,11 @@ import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate,
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";
+import { AuditTable } from "./AuditTable";
+import { HistoryPanel } from "./HistoryPanel";
+import { saveSnapshot, snapshotFromResult } from "@/lib/history";
+import { loadProfile, saveProfile, clearProfile, encryptProfile, decryptProfile, CRYPTO_MIN_PASSPHRASE, PROFILE_KEY, type ProfileData, type EncryptedEnvelope } from "@/lib/persistence";
+import { HISTORY_STORAGE_KEY, clearHistory as clearHistoryStorage } from "@/lib/history";
 
 // ---------------------------------------------------------------------------
 // Sample CSV paths (relative to basePath, served from public/samples/)
@@ -144,6 +149,12 @@ export function Calculator() {
   const [briefText, setBriefText] = useState("");
   const briefRef = useRef<HTMLTextAreaElement>(null);
 
+  // History refresh key — bump to re-read LocalStorage in HistoryPanel
+  const [historyKey, setHistoryKey] = useState(0);
+
+  // Profile encrypt toggle
+  const [encryptExport, setEncryptExport] = useState(false);
+
   // Export status
   const [exportMsg, setExportMsg] = useState("");
   const exportTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -164,6 +175,21 @@ export function Calculator() {
   }, [structure, roster]);
 
   useEffect(() => { refreshUnit(); }, [refreshUnit]);
+
+  // Profile auto-load on mount
+  useEffect(() => {
+    const saved = loadProfile();
+    if (saved) {
+      if (saved.asOf) setAsOfDate(saved.asOf);
+      if (typeof saved.policy?.countLimitedAsNonDeployable === "boolean")
+        setLimitedPolicy(saved.policy.countLimitedAsNonDeployable);
+    }
+  }, []);
+
+  // Profile auto-save on change
+  useEffect(() => {
+    saveProfile({ asOf: asOfDate, policy: { countLimitedAsNonDeployable: limitedPolicy } });
+  }, [asOfDate, limitedPolicy]);
 
   // Handle file load for a slot
   const handleFile = useCallback(async (kind: FileKind, file: File) => {
@@ -222,6 +248,10 @@ export function Calculator() {
     const unit = { uic: detectedUnit.uic, name: detectedUnit.name, asOf: asOfDate };
     const asOf = parseAsOfDate(asOfDate) ?? new Date();
     setBriefText(buildReadinessBrief(res, unit, asOf, new Date()));
+
+    // Save aggregate snapshot to history
+    saveSnapshot(snapshotFromResult(res, unit, asOfDate || todayISO()));
+    setHistoryKey((k) => k + 1);
   }, [roster, structure, critical, limitedPolicy, detectedUnit, asOfDate]);
 
   // Reset
@@ -269,6 +299,57 @@ export function Calculator() {
     triggerDownload(`plevel-audit-${sanitizeForFilename(detectedUnit.uic)}-${stamp}.csv`, "text/csv", csv);
     flashExport("Audit CSV downloaded");
   }, [result, detectedUnit, asOfDate]);
+
+  // Profile export/import
+  const profileImportRef = useRef<HTMLInputElement>(null);
+
+  const doExportProfile = useCallback(async () => {
+    const profile: ProfileData = { asOf: asOfDate, policy: { countLimitedAsNonDeployable: limitedPolicy } };
+    const uicPart = sanitizeForFilename(detectedUnit.uic);
+    if (encryptExport) {
+      const pass = prompt("Pick a passphrase for encryption (min 8 chars):");
+      if (!pass || pass.length < CRYPTO_MIN_PASSPHRASE) { flashExport(pass ? "Too short" : "Cancelled"); return; }
+      try {
+        const env = await encryptProfile(profile, pass);
+        triggerDownload(`unit-profile-${uicPart}.enc.json`, "application/json", JSON.stringify(env, null, 2));
+        flashExport("Encrypted profile exported");
+      } catch (err) { flashExport("Encryption failed: " + (err as Error).message); }
+    } else {
+      triggerDownload(`unit-profile-${uicPart}.json`, "application/json", JSON.stringify({ ...profile, schema: "drrs-plevel-unit-profile.v1", exportedAt: new Date().toISOString() }, null, 2));
+      flashExport("Profile exported (plaintext)");
+    }
+  }, [asOfDate, limitedPolicy, encryptExport, detectedUnit]);
+
+  const doImportProfile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        let data = JSON.parse(reader.result as string);
+        if (data.encrypted === true) {
+          const pass = prompt("Enter passphrase to decrypt:");
+          if (!pass) { flashExport("Cancelled"); return; }
+          try { data = await decryptProfile(data as EncryptedEnvelope, pass); }
+          catch { flashExport("Wrong passphrase or corrupted file"); return; }
+        }
+        if (data.asOf) setAsOfDate(data.asOf);
+        if (typeof data.policy?.countLimitedAsNonDeployable === "boolean")
+          setLimitedPolicy(data.policy.countLimitedAsNonDeployable);
+        flashExport("Profile loaded from " + file.name);
+      } catch (err) { flashExport("Import failed: " + (err as Error).message); }
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const doWipe = useCallback(() => {
+    if (!confirm("Wipe locally stored unit profile, calculation history, and session data?")) return;
+    clearProfile();
+    clearHistoryStorage();
+    doReset();
+    setAsOfDate(todayISO());
+    setLimitedPolicy(true);
+    setHistoryKey((k) => k + 1);
+    flashExport("Local data wiped");
+  }, [doReset]);
 
   // Brief char count
   const briefEffective = drrsReady ? sanitizeForDRRS(briefText) : briefText;
@@ -515,8 +596,26 @@ export function Calculator() {
               </table>
             </div>
           )}
+
+          {/* Per-billet audit trail */}
+          <AuditTable audit={result.critical.audit} />
         </section>
       )}
+
+      {/* History panel — always visible once there's at least one entry */}
+      <HistoryPanel refreshKey={historyKey} />
+
+      {/* Profile actions + Wipe Local Data */}
+      <div className="mb-8 flex flex-wrap items-center gap-3 border-t border-[var(--color-elevated)] pt-4">
+        <label className="flex items-center gap-1.5 font-mono text-xs text-[var(--color-muted)]">
+          <input type="checkbox" checked={encryptExport} onChange={(e) => setEncryptExport(e.target.checked)} className="accent-[var(--color-accent)]" />
+          Encrypt export
+        </label>
+        <button onClick={doExportProfile} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Export Profile</button>
+        <button onClick={() => profileImportRef.current?.click()} className="px-2 py-1 font-mono text-xs text-[var(--color-muted)] hover:text-[var(--color-ink)]">Import Profile</button>
+        <input ref={profileImportRef} type="file" accept=".json" hidden onChange={(e) => { if (e.target.files?.[0]) doImportProfile(e.target.files[0]); e.target.value = ""; }} />
+        <button onClick={doWipe} className="ml-auto px-2 py-1 font-mono text-xs text-[var(--color-p4)] hover:text-white hover:bg-[var(--color-p4)]">Wipe Local Data</button>
+      </div>
     </>
   );
 }

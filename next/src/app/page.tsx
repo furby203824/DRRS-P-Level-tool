@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import Image from "next/image";
 import { ClassificationBanner } from "@/components/ClassificationBanner";
 import { Calculator } from "@/components/Calculator";
 import { MethodologyAccordion } from "@/components/MethodologyAccordion";
@@ -13,14 +13,25 @@ export default function Home() {
           <p className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
             MCO 3000.13B &middot; para 7c
           </p>
-          <h1 className="mt-2 flex items-center gap-3 font-mono text-3xl font-black tracking-wide text-[var(--color-ink)]">
-            <Shield size={28} strokeWidth={1.5} className="text-[var(--color-accent)]" />
-            DRRS P-LEVEL CALCULATOR
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-body)]">
-            Personnel Readiness calculator. Client-side only &mdash; no
-            personnel data leaves the browser.
-          </p>
+          <div className="mt-2 flex items-center gap-4">
+            <Image
+              src="/mccsss-seal.png"
+              alt="Marine Corps Combat Service Support Schools seal"
+              width={56}
+              height={56}
+              className="flex-shrink-0"
+              priority
+            />
+            <div>
+              <h1 className="font-mono text-3xl font-black tracking-wide text-[var(--color-ink)]">
+                DRRS P-LEVEL CALCULATOR
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-[var(--color-body)]">
+                Personnel Readiness calculator. Client-side only &mdash; no
+                personnel data leaves the browser.
+              </p>
+            </div>
+          </div>
         </header>
 
         <Calculator />

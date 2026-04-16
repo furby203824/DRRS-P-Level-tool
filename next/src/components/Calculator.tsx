@@ -7,7 +7,7 @@ import { calculate, type CalcResult, type RosterRow, type StructureRow, type Cri
 import { validate, normalizeRoster, normalizeStructure, normalizeCritical, type FileKind, type ValidationResult } from "@/lib/parser";
 import { buildReadinessBrief, sanitizeForDRRS, formatDateDDMMMYY, parseAsOfDate, DRRS_REMARKS_LIMIT, ACTIONS_PLACEHOLDER, RESULTS_PLACEHOLDER } from "@/lib/brief";
 
-import { Shield, Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download } from "lucide-react";
+import { Calculator as CalcIcon, Copy, RotateCcw, AlertTriangle, TrendingDown, Download } from "lucide-react";
 import { PLevelBadge } from "./PLevelBadge";
 import { MetricRow } from "./MetricRow";
 import { FileSlot } from "./FileSlot";

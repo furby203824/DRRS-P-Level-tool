@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  const { parser, calculator } = window.PLevel;
+  const { parser, calculator, mapper } = window.PLevel;
 
   // Bundled sample CSV paths (filenames in repo root with spaces, URL-encoded).
   const SAMPLE_PATHS = {
@@ -50,7 +50,8 @@
     critical: null,
     lastResult: null,
     validation: { roster: null, structure: null, critical: null }, // {errors, warnings}
-    detectedUnit: { uic: "", name: "" }
+    detectedUnit: { uic: "", name: "" },
+    mosmerge: null  // optional MOS roster for EDIPI merge
   };
 
   // ---- DOM helpers ------------------------------------------------------
@@ -109,6 +110,79 @@
 
   function sanitizeForFilename(s) {
     return (s || "").replace(/[^A-Za-z0-9_-]+/g, "").slice(0, 16) || "NOUIC";
+  }
+
+  // ---- Strength breakdown (MO/ME/NC/NE) --------------------------------
+  function computeStrengthBreakdown() {
+    var panel = document.getElementById("strength-breakdown");
+    if (!panel) return;
+
+    // T/O Authorized — derive from PayGrade (O/W = Officer, E = Enlisted).
+    // T/O Structure doesn't carry Service so we can't split USMC/USN there.
+    var authMO = 0, authME = 0, authNC = 0, authNE = 0;
+    if (state.structure) {
+      for (var i = 0; i < state.structure.length; i++) {
+        var s = state.structure[i];
+        var pg = (s.PayGrade || "").toUpperCase();
+        var auth = s.Authorized || 0;
+        if (pg.charAt(0) === "O" || pg.charAt(0) === "W") {
+          authMO += auth; // Can't distinguish USMC vs USN from T/O alone
+        } else {
+          authME += auth;
+        }
+      }
+    }
+    var authTotal = authMO + authME + authNC + authNE;
+
+    // Assigned Strength — derive from roster Service + PayGrade.
+    // Only count ASSIGNED + ATTACHED Marines (active strength).
+    var asgMO = 0, asgME = 0, asgNC = 0, asgNE = 0;
+    if (state.roster) {
+      for (var j = 0; j < state.roster.length; j++) {
+        var m = state.roster[j];
+        var status = (m.DRRSStatus || "").toUpperCase();
+        if (status !== "ASSIGNED" && status !== "ATTACHED") continue;
+        var svc = (m.Service || "").toUpperCase();
+        var grade = (m.PayGrade || "").toUpperCase();
+        var isOfficer = grade.charAt(0) === "O" || grade.charAt(0) === "W";
+        var isNavy = svc === "USN" || svc === "NAVY";
+        if (isNavy) {
+          if (isOfficer) asgNC++; else asgNE++;
+        } else {
+          if (isOfficer) asgMO++; else asgME++;
+        }
+      }
+    }
+    var asgTotal = asgMO + asgME + asgNC + asgNE;
+
+    if (!state.structure && !state.roster) { panel.hidden = true; return; }
+    panel.hidden = false;
+
+    function setCell(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+    function fillPct(auth, asg) {
+      return auth > 0 ? ((asg / auth) * 100).toFixed(0) + "%" : "--";
+    }
+
+    setCell("str-auth-mo", authMO);
+    setCell("str-auth-me", authME);
+    setCell("str-auth-nc", authNC || "--");
+    setCell("str-auth-ne", authNE || "--");
+    setCell("str-auth-total", authTotal);
+
+    setCell("str-asg-mo", asgMO);
+    setCell("str-asg-me", asgME);
+    setCell("str-asg-nc", asgNC);
+    setCell("str-asg-ne", asgNE);
+    setCell("str-asg-total", asgTotal);
+
+    setCell("str-fill-mo", fillPct(authMO, asgMO));
+    setCell("str-fill-me", fillPct(authME, asgME));
+    setCell("str-fill-nc", authNC > 0 ? fillPct(authNC, asgNC) : "--");
+    setCell("str-fill-ne", authNE > 0 ? fillPct(authNE, asgNE) : "--");
+    setCell("str-fill-total", fillPct(authTotal, asgTotal));
   }
 
   // ---- Unit Profile persistence ---------------------------------------
@@ -464,6 +538,94 @@
         <td class="muted small">${escapeHtml(savedLabel)}Z</td>`;
       body.appendChild(tr);
     }
+    renderTrendChart(entries);
+  }
+
+  // ---- Trend chart (Chart.js) ------------------------------------------
+  var _trendChart = null;
+  function renderTrendChart(entries) {
+    const wrap = document.getElementById("trend-chart-wrap");
+    const canvas = document.getElementById("trend-chart");
+    if (!wrap || !canvas || typeof Chart === "undefined") return;
+    if (entries.length < 2) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+
+    // Sort oldest-first for the chart x-axis.
+    const sorted = entries.slice().sort(function (a, b) {
+      return (a.asOfDate || "").localeCompare(b.asOfDate || "");
+    });
+    const labels = sorted.map(function (e) {
+      return formatDateDDMMMYY(parseAsOfDate(e.asOfDate) || new Date(e.savedAt));
+    });
+    const psPcts = sorted.map(function (e) { return e.result.personnel.pct; });
+    const cmPcts = sorted.map(function (e) { return e.result.critical.pct; });
+    const pLevels = sorted.map(function (e) { return e.result.finalBand; });
+
+    if (_trendChart) _trendChart.destroy();
+    _trendChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "PS %",
+            data: psPcts,
+            borderColor: "#1f3a5f",
+            backgroundColor: "#1f3a5f22",
+            tension: 0.2,
+            yAxisID: "y"
+          },
+          {
+            label: "CM %",
+            data: cmPcts,
+            borderColor: "#cf9d2b",
+            backgroundColor: "#cf9d2b22",
+            tension: 0.2,
+            yAxisID: "y"
+          },
+          {
+            label: "P-Level",
+            data: pLevels,
+            borderColor: "#a52929",
+            borderDash: [5, 3],
+            pointStyle: "rectRot",
+            tension: 0,
+            yAxisID: "y1"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: {
+            title: { display: true, text: "Percentage" },
+            min: 0, max: 100,
+            grid: { color: "#e0e0e0" }
+          },
+          y1: {
+            title: { display: true, text: "P-Level (1=best)" },
+            position: "right",
+            min: 1, max: 4,
+            reverse: true,
+            ticks: { stepSize: 1, callback: function (v) { return "P-" + v; } },
+            grid: { drawOnChartArea: false }
+          }
+        },
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                if (ctx.dataset.label === "P-Level") return "P-" + ctx.parsed.y;
+                return ctx.dataset.label + ": " + ctx.parsed.y.toFixed(1) + "%";
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   function exportHistoryToFile() {
@@ -575,16 +737,72 @@
     $("#calculate").disabled = !(state.roster && state.structure && state.critical);
   }
 
+  // Merge MOS data from a separate file onto the roster by EDIPI.
+  function mergeEDIPIMOS(roster, mosRows) {
+    if (!mosRows || !mosRows.length) return roster;
+    const mosMap = {};
+    for (const row of mosRows) {
+      const edipi = (row.EDIPI || "").trim();
+      if (edipi) {
+        mosMap[edipi] = {
+          BMOS: (row.BMOS || "").trim(),
+          PMOS: (row.PMOS || "").trim()
+        };
+      }
+    }
+    let merged = 0;
+    const result = roster.map(function (m) {
+      const edipi = (m.EDIPI || "").trim();
+      const mos = mosMap[edipi];
+      if (mos && (!m.BMOS || !m.PMOS)) {
+        m.BMOS = m.BMOS || mos.BMOS;
+        m.PMOS = m.PMOS || mos.PMOS;
+        merged++;
+      }
+      return m;
+    });
+    return result;
+  }
+
   // ---- File handling ----------------------------------------------------
   async function handleFile(kind, file) {
     if (!file) return;
     setSlotStatus(kind, `Parsing ${file.name}...`);
     try {
-      const rows = await parser.parseCSV(file);
+      let rows = await parser.parseCSV(file);
+
+      // Handle the MOS merge file — store it and report, skip validation.
+      if (kind === "mosmerge") {
+        state.mosmerge = rows;
+        const hasEDIPI = rows.length > 0 && rows[0].EDIPI !== undefined;
+        const hasBMOS = rows.length > 0 && rows[0].BMOS !== undefined;
+        if (!hasEDIPI || !hasBMOS) {
+          setSlotStatus(kind, "Needs EDIPI + BMOS columns", false);
+          state.mosmerge = null;
+        } else {
+          setSlotStatus(kind, `${file.name} -- ${rows.length} rows (merge by EDIPI)`, true);
+        }
+        return;
+      }
+
+      // If this is a roster and it lacks DRRSStatus, run the mapper.
+      if (kind === "roster" && rows.length > 0 && mapper.needsMapping(Object.keys(rows[0]))) {
+        const asOfDate = parseAsOfDate($("#unit-asof").value) || new Date();
+        const mapped = mapper.classifyRoster(rows, asOfDate);
+        rows = mapped.classified;
+        showMappingPanel(rows, mapped.reviewCount);
+        // Add a warning so the operator knows mapping was auto-applied.
+        state.validation[kind] = state.validation[kind] || { errors: [], warnings: [] };
+        state.validation[kind].warnings.push(
+          `Alpha Roster: DRRSStatus column not found. Auto-mapped ${rows.length} rows from DutyStatus. ` +
+          `${mapped.reviewCount} row(s) flagged for S-1 review.`
+        );
+      }
+
       const validation = parser.validate(kind, rows);
       state.validation[kind] = {
-        errors: validation.errors || [],
-        warnings: validation.warnings || []
+        errors: (state.validation[kind] ? state.validation[kind].errors : []).concat(validation.errors || []),
+        warnings: (state.validation[kind] ? state.validation[kind].warnings : []).concat(validation.warnings || [])
       };
       if (validation.errors && validation.errors.length) {
         setSlotStatus(kind, validation.errors[0], false);
@@ -592,12 +810,13 @@
       } else {
         const normalized = normalize(kind, rows);
         state[kind] = normalized;
-        const warnCount = validation.warnings ? validation.warnings.length : 0;
+        const warnCount = state.validation[kind].warnings.length;
         const suffix = warnCount ? ` -- ${warnCount} warning${warnCount === 1 ? "" : "s"}` : "";
         setSlotStatus(kind, `${file.name} -- ${normalized.length} rows${suffix}`, true);
       }
       renderFromState();
       refreshDetectedUnit();
+    computeStrengthBreakdown();
     } catch (err) {
       state.validation[kind] = { errors: [`${parser.SCHEMA[kind].label}: ${err.message}`], warnings: [] };
       setSlotStatus(kind, `Error: ${err.message}`, false);
@@ -606,10 +825,81 @@
     refreshCalculateButton();
   }
 
+  // ---- Mapping review panel ---------------------------------------------
+  function showMappingPanel(classifiedRows, reviewCount) {
+    const panel = document.getElementById("mapping-panel");
+    const body = document.getElementById("mapping-table-body");
+    const countEl = document.getElementById("mapping-review-count");
+    if (!panel || !body) return;
+
+    const summary = mapper.mappingSummary(classifiedRows);
+    body.innerHTML = "";
+    for (const s of summary) {
+      const tr = document.createElement("tr");
+      if (s.needsReview) tr.classList.add("needs-review");
+      tr.innerHTML =
+        `<td>${escapeHtml(s.dutyStatus)}</td>` +
+        `<td class="num">${s.count}</td>` +
+        `<td><select data-ds="${escapeHtml(s.dutyStatus)}" data-field="drrs">` +
+          `<option value="ASSIGNED" ${s.drrsStatus === "ASSIGNED" ? "selected" : ""}>ASSIGNED</option>` +
+          `<option value="ATTACHED" ${s.drrsStatus === "ATTACHED" ? "selected" : ""}>ATTACHED</option>` +
+          `<option value="DETACHED" ${s.drrsStatus === "DETACHED" ? "selected" : ""}>DETACHED</option>` +
+          `<option value="IA" ${s.drrsStatus === "IA" ? "selected" : ""}>IA</option>` +
+          `<option value="JIA" ${s.drrsStatus === "JIA" ? "selected" : ""}>JIA</option>` +
+        `</select></td>` +
+        `<td><select data-ds="${escapeHtml(s.dutyStatus)}" data-field="deploy">` +
+          `<option value="Y" ${s.deployable === "Y" ? "selected" : ""}>Y (Deployable)</option>` +
+          `<option value="N" ${s.deployable === "N" ? "selected" : ""}>N (Non-Dep)</option>` +
+          `<option value="L" ${s.deployable === "L" ? "selected" : ""}>L (Limited)</option>` +
+        `</select></td>` +
+        `<td>${s.needsReview ? '<span class="tag tag-unfilled">REVIEW</span>' : '<span class="tag tag-filled">OK</span>'}</td>`;
+      body.appendChild(tr);
+    }
+    if (countEl) {
+      countEl.textContent = reviewCount > 0
+        ? `${reviewCount} row(s) flagged for S-1 review. Adjust the dropdowns above if needed.`
+        : "All rows mapped with high confidence. Verify and proceed.";
+    }
+    panel.hidden = false;
+  }
+
+  function hideMappingPanel() {
+    const panel = document.getElementById("mapping-panel");
+    if (panel) panel.hidden = true;
+  }
+
+  // When the S-1 clicks "Accept Mapping", apply any dropdown overrides
+  // back to the in-memory roster, then re-normalize.
+  function acceptMapping() {
+    if (!state.roster) { hideMappingPanel(); return; }
+    const selects = document.querySelectorAll("#mapping-table-body select");
+    const overrides = {};
+    selects.forEach(function (sel) {
+      const ds = sel.getAttribute("data-ds");
+      const field = sel.getAttribute("data-field");
+      if (!overrides[ds]) overrides[ds] = {};
+      if (field === "drrs") overrides[ds].DRRSStatus = sel.value;
+      if (field === "deploy") overrides[ds].DeployableFlag = sel.value;
+    });
+    // Re-apply overrides to the in-memory roster.
+    state.roster = state.roster.map(function (m) {
+      var ds = (m.DutyStatus || "").trim();
+      var ov = overrides[ds];
+      if (ov) {
+        if (ov.DRRSStatus) m.DRRSStatus = ov.DRRSStatus;
+        if (ov.DeployableFlag) m.DeployableFlag = ov.DeployableFlag;
+      }
+      return m;
+    });
+    hideMappingPanel();
+    refreshCalculateButton();
+  }
+
   function normalize(kind, rows) {
     if (kind === "roster") return parser.normalizeRoster(rows);
     if (kind === "structure") return parser.normalizeStructure(rows);
     if (kind === "critical") return parser.normalizeCritical(rows);
+    if (kind === "mosmerge") return rows; // raw rows, merged by EDIPI later
     return rows;
   }
 
@@ -647,6 +937,7 @@
     }
     renderFromState();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
     refreshCalculateButton();
   }
 
@@ -794,9 +1085,10 @@
       `${c.pct.toFixed(1)}% (${c.filled}/${c.authorized} billets). ` +
       `Binding: ${driverShort}.`;
 
-    const reasonCode = suggestReasonCode(result);
+    const reasonCode = opts.reasonCodeOverride || suggestReasonCode(result);
+    const isSuggested = !opts.reasonCodeOverride;
     const reasonLine = reasonCode
-      ? `REASON CODE (SUGGESTED): ${reasonCode}`
+      ? `REASON CODE${isSuggested ? " (SUGGESTED)" : ""}: ${reasonCode}`
       : `REASON CODE: N/A (P-1)`;
 
     const policyLine = result.options.countLimitedAsNonDeployable
@@ -939,7 +1231,20 @@
     if (!ta) return;
     const unit = readUnitProfile();
     const asOf = parseAsOfDate(unit.asOf) || new Date();
-    ta.value = buildReadinessBrief(result, unit, asOf, new Date());
+
+    // Set the reason code dropdown to the auto-suggested value, unless
+    // the user already manually selected one.
+    const rcSelect = $("#reason-code");
+    if (rcSelect && !rcSelect.dataset.userSet) {
+      const autoCode = suggestReasonCode(result);
+      rcSelect.value = autoCode || "N/A";
+    }
+    const reasonOverride = rcSelect && rcSelect.value && rcSelect.value !== ""
+      ? rcSelect.value : null;
+
+    ta.value = buildReadinessBrief(result, unit, asOf, new Date(), {
+      reasonCodeOverride: reasonOverride
+    });
     updateBriefCount();
   }
 
@@ -993,29 +1298,24 @@
     const p = result.personnel;
     const c = result.critical;
 
-    // Personnel Strength formula. Detached/IA/JIA are excluded upstream (by
-    // DRRSStatus) so they do not appear in the subtraction -- we note their
-    // counts on a separate line for audit completeness.
-    const limitedTerm = p.countLimitedAsNonDeployable
-      ? ` + ${p.limited}`
-      : "";
+    // Personnel Strength formula per MCO 3000.13B:
+    // ((Assigned + Attached) - (Detached + Non-Deployable + IA/JIA)) / Structure Strength
+    // "Assigned + Attached" = total unit headcount on books.
+    const totalOnBooks = p.assignedAttached + p.detached + p.ia + p.jia;
     const limitedLabel = p.countLimitedAsNonDeployable
       ? ` + Limited(${p.limited})`
       : "";
+    const subtractions = p.detached + p.nonDeployable + (p.limitedSubtracted || 0) + p.ia + p.jia;
     const psNumerator =
-      `Numerator = (Assigned(${p.assigned}) + Attached(${p.attached})) ` +
-      `\u2212 (NonDep(${p.nonDeployable})${limitedLabel}) = ` +
-      `${p.assignedAttached} \u2212 ${p.nonDeployable + (p.limitedSubtracted || 0)} = ${p.effective}`;
-    const psExcluded =
-      `Separately excluded by DRRSStatus: Detached(${p.detached}) + IA(${p.ia}) + JIA(${p.jia})`;
+      `Total on books = ${totalOnBooks}` +
+      `  \u2212  (Det(${p.detached}) + NonDep(${p.nonDeployable})${limitedLabel} + IA(${p.ia}) + JIA(${p.jia}))` +
+      ` = ${totalOnBooks} \u2212 ${subtractions} = ${p.effective}`;
     const psPct =
       `Percentage = ${p.effective} / ${p.authorized} = ` +
       `${p.pct.toFixed(1)}% \u2192 P-${result.band.pBand}`;
 
     $("#formula-ps-num").textContent = psNumerator;
-    // Re-purpose the second code slot to show excluded + percentage stacked.
-    $("#formula-ps-pct").innerHTML =
-      `${escapeHtml(psExcluded)}<br>${escapeHtml(psPct)}`;
+    $("#formula-ps-pct").textContent = psPct;
 
     const cmNumerator =
       `Numerator = Critical billets filled = ${c.filled}`;
@@ -1111,6 +1411,8 @@
     ["roster", "structure", "critical"].forEach((k) => setSlotStatus(k, "Drop CSV or click to browse"));
     renderFromState();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
+    hideMappingPanel();
     $("#results-section").hidden = true;
     const briefTa = $("#brief-textarea");
     if (briefTa) briefTa.value = "";
@@ -1143,8 +1445,8 @@
         slot.classList.remove("drag-over");
         const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (!file) return;
-        if (!/\.csv$/i.test(file.name)) {
-          setSlotStatus(kind, `Not a .csv file: ${file.name}`, false);
+        if (!/\.(csv|xlsx?)$/i.test(file.name)) {
+          setSlotStatus(kind, `Not a CSV or XLSX file: ${file.name}`, false);
           return;
         }
         // Sync the hidden input so the form reflects the chosen file.
@@ -1173,6 +1475,7 @@
     if (asofInput && !asofInput.value) asofInput.value = todayISODate();
     loadProfileFromStorage();
     refreshDetectedUnit();
+    computeStrengthBreakdown();
 
     // Auto-save operator-supplied profile fields on change. UIC and
     // Unit Name are derived from the loaded CSV and not persisted.
@@ -1195,6 +1498,9 @@
       });
     }
     if (wipeBtn) wipeBtn.addEventListener("click", wipeLocalData);
+
+    const mappingAcceptBtn = document.getElementById("mapping-accept");
+    if (mappingAcceptBtn) mappingAcceptBtn.addEventListener("click", acceptMapping);
 
     const histExport = document.getElementById("history-export");
     const histClear = document.getElementById("history-clear");
@@ -1229,8 +1535,16 @@
         const options = {
           countLimitedAsNonDeployable: $("#policy-limited").checked
         };
+        // Apply MOS merge if a separate MOS roster was uploaded.
+        let rosterForCalc = state.roster;
+        if (state.mosmerge && state.mosmerge.length) {
+          rosterForCalc = mergeEDIPIMOS(
+            rosterForCalc.map(function (r) { var o = {}; for (var k in r) o[k] = r[k]; return o; }),
+            state.mosmerge
+          );
+        }
         const result = calculator.calculate(
-          state.roster, state.structure, state.critical, options
+          rosterForCalc, state.structure, state.critical, options
         );
         renderResults(result);
       } catch (err) {
@@ -1250,7 +1564,15 @@
     const regenBtn = document.getElementById("brief-regen");
     if (briefTa) briefTa.addEventListener("input", updateBriefCount);
     if (drrsReady) drrsReady.addEventListener("change", updateBriefCount);
+    const rcSelect = document.getElementById("reason-code");
+    if (rcSelect) {
+      rcSelect.addEventListener("change", function () {
+        rcSelect.dataset.userSet = rcSelect.value ? "true" : "";
+        if (state.lastResult) renderBriefPreview(state.lastResult);
+      });
+    }
     if (regenBtn) regenBtn.addEventListener("click", () => {
+      if (rcSelect) { rcSelect.dataset.userSet = ""; rcSelect.value = ""; }
       if (state.lastResult) renderBriefPreview(state.lastResult);
     });
   }

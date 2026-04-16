@@ -198,6 +198,26 @@ html, body {
   margin-top: 8px;
 }
 .unit-actions .policy-hint { margin: 0; max-width: 60ch; }
+
+/* Strength breakdown (MO/ME/NC/NE) */
+.strength-breakdown {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.strength-table {
+  font-size: 12px;
+}
+.strength-table th .unit-label {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.strength-table th { font-size: 12px; }
+.strength-table td, .strength-table th { padding: 4px 8px; }
 .unit-action-row {
   display: flex;
   gap: 6px;
@@ -671,6 +691,15 @@ html, body {
   cursor: pointer;
 }
 .brief-toggle input { accent-color: var(--accent); }
+.reason-select {
+  font: inherit;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
 .brief-count {
   margin-left: auto;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -745,6 +774,10 @@ html, body {
 .tag-p3 { background: var(--p3); color: #fff; border-color: var(--p3); }
 .tag-p4 { background: var(--p4); color: #fff; border-color: var(--p4); }
 
+.trend-chart-wrap {
+  margin: 14px 0 8px;
+  max-height: 220px;
+}
 @media print { .history-card { display: none !important; } }
 
 /* Passphrase modal dialog */
@@ -803,6 +836,31 @@ html, body {
   color: var(--bad);
   margin-top: 8px;
 }
+
+/* Status mapping review panel */
+.mapping-panel {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--warn);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: #fff8eb;
+}
+.mapping-panel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.mapping-panel .data-table { margin: 10px 0; }
+.mapping-panel select {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+}
+.mapping-panel tr.needs-review { background: #fff3cd; }
 
 /* Print-only header (hidden on screen) */
 .print-header { display: none; }

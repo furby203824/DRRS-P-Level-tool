@@ -7,6 +7,8 @@
   <meta name="description" content="USMC Personnel Readiness (P-Level) calculator per MCO 3000.13B. Client-side only." />
   <link rel="stylesheet" href="assets/css/styles.css" />
   <script src="assets/vendor/papaparse.min.js"></script>
+  <script src="assets/vendor/xlsx.mini.min.js"></script>
+  <script src="assets/vendor/chart.umd.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#upload-section">Skip to calculator</a>
@@ -48,6 +50,52 @@
             <input type="date" id="unit-asof" />
           </label>
         </div>
+
+        <div id="strength-breakdown" class="strength-breakdown" hidden>
+          <table class="data-table strength-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="num">MO<br><span class="unit-label">Marine Off</span></th>
+                <th class="num">ME<br><span class="unit-label">Marine Enl</span></th>
+                <th class="num">NC<br><span class="unit-label">Navy Off</span></th>
+                <th class="num">NE<br><span class="unit-label">Navy Enl</span></th>
+                <th class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>T/O Authorized</td>
+                <td class="num" id="str-auth-mo">--</td>
+                <td class="num" id="str-auth-me">--</td>
+                <td class="num" id="str-auth-nc">--</td>
+                <td class="num" id="str-auth-ne">--</td>
+                <td class="num" id="str-auth-total">--</td>
+              </tr>
+              <tr>
+                <td>Assigned Strength</td>
+                <td class="num" id="str-asg-mo">--</td>
+                <td class="num" id="str-asg-me">--</td>
+                <td class="num" id="str-asg-nc">--</td>
+                <td class="num" id="str-asg-ne">--</td>
+                <td class="num" id="str-asg-total">--</td>
+              </tr>
+              <tr class="muted">
+                <td>Fill %</td>
+                <td class="num" id="str-fill-mo">--</td>
+                <td class="num" id="str-fill-me">--</td>
+                <td class="num" id="str-fill-nc">--</td>
+                <td class="num" id="str-fill-ne">--</td>
+                <td class="num" id="str-fill-total">--</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted small">
+            MO/ME derived from T/O PayGrade (O/W = Officer, E = Enlisted).
+            NC/NE split requires Service column in roster (USN vs USMC).
+            T/O Structure does not carry Service, so Navy billets show in the Officer/Enlisted totals.
+          </p>
+        </div>
         <div class="unit-actions">
           <p class="policy-hint">UIC and Unit Name are read from the T/O Structure CSV when it loads. As-Of Date is operator-supplied and auto-saved to your browser. All three stamp onto the readiness brief, JSON export, and audit CSV filename.</p>
           <div class="unit-action-row">
@@ -69,29 +117,72 @@
         <label class="slot" data-slot="roster">
           <div class="slot-title">Alpha Roster</div>
           <div class="slot-sub">One row per Marine / service member</div>
-          <input type="file" accept=".csv" data-target="roster" aria-describedby="status-roster" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="roster" aria-describedby="status-roster" />
           <div class="slot-status" id="status-roster" data-status="roster" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
         <label class="slot" data-slot="structure">
           <div class="slot-title">T/O Structure</div>
           <div class="slot-sub">Authorized billets by BMOS + PayGrade</div>
-          <input type="file" accept=".csv" data-target="structure" aria-describedby="status-structure" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="structure" aria-describedby="status-structure" />
           <div class="slot-status" id="status-structure" data-status="structure" aria-live="polite">Drop CSV or click to browse</div>
         </label>
 
         <label class="slot" data-slot="critical">
           <div class="slot-title">Critical MOS List</div>
           <div class="slot-sub">Mission-essential MOS for unit type</div>
-          <input type="file" accept=".csv" data-target="critical" aria-describedby="status-critical" />
+          <input type="file" accept=".csv,.xlsx,.xls" data-target="critical" aria-describedby="status-critical" />
           <div class="slot-status" id="status-critical" data-status="critical" aria-live="polite">Drop CSV or click to browse</div>
         </label>
       </div>
+
+      <details class="mos-merge-block" id="mos-merge-section">
+        <summary class="muted small">
+          Optional: MOS Roster (if alpha roster lacks BMOS / PMOS columns)
+        </summary>
+        <p class="muted small">
+          Upload a MCTFS or OneSource export with EDIPI + BMOS + PMOS columns.
+          The tool will merge MOS data onto the alpha roster by EDIPI, enabling
+          the Critical MOS calculation.
+        </p>
+        <div class="upload-grid" style="grid-template-columns: 1fr;">
+          <label class="slot" data-slot="mosmerge">
+            <div class="slot-title">MOS Roster (EDIPI + BMOS + PMOS)</div>
+            <div class="slot-sub">Merged onto the alpha roster by EDIPI</div>
+            <input type="file" accept=".csv,.xlsx,.xls" data-target="mosmerge" aria-describedby="status-mosmerge" />
+            <div class="slot-status" id="status-mosmerge" data-status="mosmerge" aria-live="polite">Drop CSV or click to browse</div>
+          </label>
+        </div>
+      </details>
 
       <div class="actions">
         <button id="load-sample" class="btn btn-secondary" type="button">Load Sample Data</button>
         <button id="calculate" class="btn btn-primary" type="button" disabled>Calculate P-Level</button>
         <button id="reset" class="btn btn-ghost" type="button">Reset</button>
+      </div>
+
+      <div id="mapping-panel" class="mapping-panel" hidden>
+        <h3>Status Mapping Review</h3>
+        <p class="muted small">
+          This roster does not have a <code>DRRSStatus</code> column. The tool
+          auto-mapped each <code>DutyStatus</code> value to a DRRS classification
+          using MCO 3000.13B defaults. Rows flagged for review are highlighted.
+          Adjust below, then proceed to Calculate.
+        </p>
+        <table class="data-table" id="mapping-table">
+          <thead>
+            <tr>
+              <th>DutyStatus</th>
+              <th class="num">Count</th>
+              <th>DRRS Status</th>
+              <th>Deployable</th>
+              <th>Review</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-table-body"></tbody>
+        </table>
+        <p class="muted small" id="mapping-review-count"></p>
+        <button id="mapping-accept" class="btn btn-primary" type="button">Accept Mapping &amp; Continue</button>
       </div>
 
       <fieldset class="policy">
@@ -189,7 +280,22 @@
         <div class="brief-controls">
           <label class="brief-toggle">
             <input type="checkbox" id="drrs-ready" checked />
-            <span>DRRS-Ready (strip smart quotes, dashes, non-ASCII)</span>
+            <span>DRRS-Ready</span>
+          </label>
+          <label class="brief-toggle">
+            <span class="unit-label">Reason Code</span>
+            <select id="reason-code" class="reason-select">
+              <option value="">(auto from calc)</option>
+              <option value="S-MANPOWER">S-MANPOWER</option>
+              <option value="S-MOS-QUAL">S-MOS-QUAL</option>
+              <option value="S-PERSTAT">S-PERSTAT</option>
+              <option value="S-BIC">S-BIC</option>
+              <option value="S-RET-EAS">S-RET-EAS</option>
+              <option value="S-MED-DENTAL">S-MED-DENTAL</option>
+              <option value="S-ADMIN-SEP">S-ADMIN-SEP</option>
+              <option value="S-TRAINING">S-TRAINING</option>
+              <option value="N/A">N/A (P-1)</option>
+            </select>
           </label>
           <button id="brief-regen" type="button" class="btn btn-ghost small">Regenerate</button>
           <div id="brief-count-container" class="brief-count" aria-live="polite">
@@ -271,6 +377,9 @@
         files you download. One entry per (UIC, as-of date).
       </p>
       <p class="muted small" id="history-empty" hidden>No history yet. Run a calculation to populate.</p>
+      <div id="trend-chart-wrap" class="trend-chart-wrap" hidden>
+        <canvas id="trend-chart" height="200"></canvas>
+      </div>
       <div class="history-table-wrap">
         <table class="data-table" id="history-table">
           <thead>
@@ -324,22 +433,20 @@
         <div class="meth-body">
           <div class="formula">
             <div class="formula-label">Personnel Strength</div>
-            <code>((Assigned + Attached) &minus; Non-Deployable) / T/O Authorized &times; 100</code>
+            <code>((Assigned + Attached) &minus; (Detached + Non-Deployable + IA/JIA)) / Structure Strength &times; 100</code>
           </div>
           <div class="formula">
             <div class="formula-label">Critical MOS</div>
-            <code>Critical Billets Filled / Critical Billets Authorized &times; 100</code>
+            <code>((Crit Assigned + Attached) &minus; (Crit Detached + Crit Non-Dep + Crit IA/JIA)) / Crit Structure Strength &times; 100</code>
           </div>
           <p class="muted small">
-            Detached, IA, and JIA Marines are already excluded by DRRSStatus
-            (they are not in the Assigned+Attached pool), so they do not appear
-            in the subtraction &mdash; subtracting them again would double-count.
-            Non-Deployable only counts <code>DLC = N</code> (and, per unit
-            policy, <code>DLC = L</code>) Marines who are still in the
-            Assigned+Attached pool.
+            Same shape, different population. &ldquo;Assigned + Attached&rdquo; is the total
+            unit headcount on books. Detached, Non-Deployable, and IA/JIA are subtracted
+            from that total. Non-Deployable includes <code>DLC = N</code> and (per unit
+            policy) <code>DLC = L</code>. Whichever metric scores lower wins. Period.
           </p>
           <p class="muted small">
-            Critical MOS numerator is computed by greedy matching of qualified
+            Critical MOS fill is computed by greedy matching of qualified
             Marines to critical billets (BMOS-primary then PMOS-secondary, exact
             grade preferred then &plusmn;1). Detail in block A.
           </p>
@@ -413,12 +520,10 @@
             </li>
             <li>
               <strong>Compute the Numerator.</strong>
-              Add Assigned and Attached. Subtract Non-Deployable (the
-              <code>DLC = N</code> Marines still in that Assigned+Attached pool;
-              and <code>DLC = L</code> too, per unit policy). Do <em>not</em>
-              subtract Detached / IA / JIA a second time &mdash; they are already
-              excluded because their DRRSStatus put them outside the
-              Assigned+Attached pool. Subtracting them again would double-count.
+              Start with Assigned plus Attached (total unit headcount on books).
+              Subtract Detached, Non-Deployable, IA, and JIA. Non-Deployable
+              includes <code>DLC = N</code> and (per unit policy) <code>DLC = L</code>.
+              Per MCO 3000.13B para 7c.
             </li>
             <li>
               <strong>Divide and Multiply.</strong>
@@ -494,12 +599,10 @@
               <div class="example-label">Roster</div>
               <table class="data-table">
                 <tbody>
-                  <tr><td>Assigned (DRRSStatus = ASSIGNED)</td><td class="num">45</td></tr>
-                  <tr><td>Attached (DRRSStatus = ATTACHED)</td><td class="num">3</td></tr>
-                  <tr><td>Non-Deployable (DLC = N, in Asg+Att)</td><td class="num">4</td></tr>
-                  <tr><td>Limited (DLC = L, in Asg+Att)</td><td class="num">0</td></tr>
-                  <tr><td>Detached (separate, excluded)</td><td class="num">2</td></tr>
-                  <tr><td>IA / JIA (separate, excluded)</td><td class="num">0</td></tr>
+                  <tr><td>Assigned + Attached (total on books)</td><td class="num">50</td></tr>
+                  <tr><td>Detached</td><td class="num">2</td></tr>
+                  <tr><td>Non-Deployable (DLC = N)</td><td class="num">4</td></tr>
+                  <tr><td>IA / JIA</td><td class="num">0</td></tr>
                 </tbody>
               </table>
             </div>
@@ -520,9 +623,8 @@
           <div class="example-calc">
             <div class="formula">
               <div class="formula-label">Personnel Strength</div>
-              <code>Numerator = (Assigned(45) + Attached(3)) &minus; NonDep(4) = 48 &minus; 4 = 44</code>
+              <code>Numerator = (50) &minus; (Detached(2) + NonDep(4) + IA/JIA(0)) = 50 &minus; 6 = 44</code>
               <code>Percentage = 44 / 50 = <strong>88.0%</strong> &rarr; <span class="band-pill p2">P-2</span></code>
-              <code class="muted small">Detached(2) and IA/JIA(0) already excluded by DRRSStatus &mdash; do not subtract again.</code>
             </div>
             <div class="formula">
               <div class="formula-label">Critical MOS</div>
@@ -633,6 +735,7 @@
   </dialog>
 
   <script src="assets/js/parser.js"></script>
+  <script src="assets/js/mapper.js"></script>
   <script src="assets/js/calculator.js"></script>
   <script src="assets/js/app.js"></script>
 </body>

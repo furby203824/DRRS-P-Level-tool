@@ -917,14 +917,23 @@ a.cite-chip:focus-visible {
 
 /* Reference links in Source Documents */
 .ref-link {
-  color: var(--accent);
+  color: #0b61c4;
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.ref-link:visited { color: #5a3a9a; }
 .ref-link:hover,
 .ref-link:focus-visible {
-  color: #0b3d7a;
+  color: #084a98;
   text-decoration-thickness: 2px;
+}
+.ref-link::after {
+  content: " \2197"; /* north-east arrow = opens in new tab */
+  font-size: 0.85em;
+  display: inline-block;
+  margin-left: 2px;
+  text-decoration: none;
 }
 
 /* Policy toggle fieldset */

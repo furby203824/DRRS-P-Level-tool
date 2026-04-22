@@ -5,23 +5,32 @@ the Personnel Readiness (P-Level) percentage per **MCO 3000.13B** paragraph 7c.
 
 ## Live demo (GitHub Pages)
 
-This is a static site -- no backend, no build step. All CSV parsing and
-calculation runs in the browser. **No personnel data leaves the user's
-machine.**
+The live app is the Next.js port in [`next/`](next/), statically exported
+to [`docs/`](docs/) so GitHub Pages can serve it. All CSV parsing and
+calculation still runs in the browser. **No personnel data leaves the
+user's machine.**
 
 To enable hosting:
 1. Push this branch to GitHub.
-2. Repo Settings -> Pages -> Source: deploy from branch -> select this branch,
-   `/ (root)`.
+2. Repo Settings -> Pages -> Source: deploy from branch -> select this
+   branch, folder `/docs`.
 3. The site will be served at
    `https://<user>.github.io/DRRS-P-Level-tool/`.
 
-For local preview without deploying, serve the repo root with any static
-server, e.g.:
+For local development:
 
 ```
-python3 -m http.server 8000
-# then open http://localhost:8000/
+cd next
+npm install
+npm run dev       # http://localhost:3000
+```
+
+To rebuild the static export after source changes:
+
+```
+cd next
+npm run build     # emits next/out/
+# then sync next/out/ to docs/ (keep docs/.nojekyll)
 ```
 
 ## Inputs
@@ -125,12 +134,12 @@ deliberate break of ADR-1 and must come with updated hosting paperwork.
 ## Files
 
 ```
-index.html
-assets/
-  css/styles.css
-  js/parser.js       -- CSV parsing + schema validation
-  js/calculator.js   -- P-Level math (MCO 3000.13B para 7c)
-  js/app.js          -- UI wiring
+next/                -- Next.js source (live app, static export)
+  src/app/           -- Routes and layout
+  src/components/    -- Calculator, MethodologyAccordion, HistoryPanel, etc.
+  src/lib/           -- parser, plevel math, brief, exports, history
+  tests/             -- Vitest suites (plevel, parser, brief)
+docs/                -- Built static export served by GitHub Pages
 SCHEMA.md            -- Data contract for the three CSVs (greppable)
 SCHEMA.pdf           -- Original data contract PDF
 generate alpha roster.pdf  -- Source of the sample data generator
@@ -140,3 +149,7 @@ critical mos example.csv
 DESIGN_SYSTEM.md     -- UI style and scheme reference (for extension/handoff)
 UX_AUDIT_PROMPT.md   -- Reusable LLM prompt for heuristic UX evaluation
 ```
+
+An earlier plain-HTML proof of concept lived at the repo root (`index.html`
+plus `assets/`). It was retired once the Next.js port reached feature
+parity; see the git history if you need that version.

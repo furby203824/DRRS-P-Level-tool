@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { ClassificationBanner } from "@/components/ClassificationBanner";
 import { Calculator } from "@/components/Calculator";
-import { MethodologyAccordion } from "@/components/MethodologyAccordion";
 
 const basePath = process.env.NODE_ENV === "production" ? "/DRRS-P-Level-tool" : "";
 
@@ -18,17 +18,23 @@ export default function Home() {
 
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="mb-8 border-b border-[var(--color-elevated)] pb-6">
-          <p className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
-            <a
-              href="https://www.marines.mil/Portals/1/Publications/MCO%203000.13B.pdf?ver=2020-07-15-110758-503"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
-              title="Open MCO 3000.13B (opens in a new tab)"
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <p className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
+              <Link
+                href="/methodology/#formulas"
+                className="underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+                title="View methodology (formulas section)"
+              >
+                MCO 3000.13B &middot; para 7c
+              </Link>
+            </p>
+            <Link
+              href="/methodology/"
+              className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
             >
-              MCO 3000.13B &middot; para 7c
-            </a>
-          </p>
+              Methodology →
+            </Link>
+          </div>
           <div className="mt-2 flex items-center gap-4">
             <img
               src={`${basePath}/mccsss-seal.png`}
@@ -53,10 +59,18 @@ export default function Home() {
         </header>
 
         <Calculator />
-        <MethodologyAccordion />
 
         <footer className="mt-8 border-t border-[var(--color-elevated)] pt-4 text-xs text-[var(--color-mute-2)]">
           <p className="font-mono">
+            <Link href="/methodology/" className="text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]">
+              Methodology
+            </Link>
+            {" "}· {" "}
+            <Link href="/" className="text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]">
+              Calculator
+            </Link>
+          </p>
+          <p className="mt-1 font-mono">
             Implements MCO 3000.13B para 7c. Synthetic sample data only &mdash;
             EDIPIs prefixed <code className="text-[var(--color-muted)]">99</code>.
           </p>

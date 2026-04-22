@@ -1,0 +1,64 @@
+Plan: Move Methodology to its own /methodology/ page
+Context
+Today, MethodologyAccordion renders on the home page (next/src/app/page.tsx:56). It’s a 13-block accordion that takes up significant vertical space below the calculator and has no URL-addressable anchors — readers can’t deep-link to formulas, the worked example, or source documents. The header’s MCO 3000.13B · para 7c chip currently jumps straight to the external PDF (next/src/app/page.tsx:22–30), which skips over the in-app explanation entirely.
+Moving the methodology to a dedicated route gives readers:
+•	A clean calculator-first home page.
+•	A stable URL per section (/methodology/#formulas, /methodology/#worked-example, /methodology/#sources).
+•	A scannable sticky left-rail TOC because every block is expanded by default.
+•	A better home for the header chip — it now points to in-app doctrine first; the external MCO PDF is still one click away in the Source Documents section.
+Constraints to respect:
+•	Static export (next.config.ts:17 output: “export”) with basePath of /DRRS-P-Level-tool in prod.
+•	trailingSlash: true, so the new route lives at /methodology/ (with trailing slash).
+•	Build output is next/out/ and must be synced into top-level docs/ (GitHub Pages serves from there per README).
+•	Tailwind v4 + CSS variables already defined in globals.css; reuse tokens, don’t add new ones.
+Approach
+1.	Extract shared content into a data module
+Pull the blocks array out of MethodologyAccordion.tsx into a new file so the methodology page and the (to-be-removed) accordion don’t diverge:
+•	New file: next/src/components/methodologyBlocks.tsx
+•	Exports blocks: Block[] and a Block interface extended with:
+•	id: string — URL slug for the section (e.g., what-p-level-measures, formulas, worked-example, sources).
+•	Preserve existing num, title, content.
+•	Slug map (exact strings to support the requested deep links):
+•	01 → what-p-level-measures
+•	02 → formulas
+•	03 → band-tables
+•	04 → manual-calculation
+•	05 → critical-mos-fill
+•	06 → exclusions
+•	07 → worked-example
+•	08 → architecture
+•	09 → data-classification
+•	10 → schema-provenance
+•	11 → compliance-domains
+•	12 → nist-controls
+•	§ → sources
+•	Keep content JSX identical — copy verbatim from next/src/components/MethodologyAccordion.tsx:12–471.
+2.	Create next/src/app/methodology/page.tsx
+Server component (no “use client” needed — no interactivity; the TOC is anchor links, not React state). Structure:
+•	<main id="main" className="flex-1"> with top and bottom <ClassificationBanner /> so the page visually matches home.
+•	Page header: breadcrumb ← Back to Calculator (Next.js <Link href="/">), H1 METHODOLOGY, short subtitle.
+•	Two-column layout (lg:grid-cols-[16rem_1fr] gap-8):
+•	Left column (TOC): <nav aria-label="Methodology sections"> with lg:sticky lg:top-4 lg:self-start. Renders blocks.map(b => <a href={#${b.id}}>{b.num} {b.title}</a>). On mobile (< lg), stacks above content.
+•	Right column (content): blocks.map(b => <section id={b.id} className="scroll-mt-4 border-t border-[var(--color-border)] pt-6 mt-6 first:border-t-0 first:pt-0 first:mt-0"> …). Each section renders the {block.num} chip + {block.title} as an <h2> (so headings land in the document outline), then {block.content}. All sections are expanded — no toggle button, no useState.
+•	Footer identical to home page footer so the page stands on its own.
+•	Use scroll-mt-4 (or similar) on each <section> so hash-scrolling doesn’t hide headings behind the OPSEC banner if one is added later.
+3.	Page-level metadata
+Add a metadata export in methodology/page.tsx:
+export const metadata: Metadata = {
+title: “Methodology · DRRS P-Level Calculator”,
+description: “How P-Level is calculated per MCO 3000.13B paragraph 7c — formulas, band tables, worked example, and source documents.”,
+};
+This differentiates the page title from the home page while reusing the root <html>/<body> layout in next/src/app/layout.tsx.
+4. Remove <MethodologyAccordion /> from the home page
+In next/src/app/page.tsx:
+•	Delete the import { MethodologyAccordion } line (page.tsx:3).
+•	Delete the <MethodologyAccordion /> render (page.tsx:56).
+•	Delete next/src/components/MethodologyAccordion.tsx — it will have no remaining references once the import is removed. (The blocks data lives in methodologyBlocks.tsx now.)
+5. Navigation link + footer link
+On the home page (next/src/app/page.tsx):
+•	Nav link: add a small nav row in the header (below the chip, or right-aligned in the header flex). Use Next.js <Link href="/methodology/">Methodology →</Link> styled as an accent link. Next.js auto-prepends basePath, so no manual ${basePath} needed.
+•	Footer link: add a third <p> inside the existing footer (page.tsx:58–66): <Link href="/methodology/">Methodology</Link> · <Link href="/">Calculator</Link>.
+Mirror the same footer block on methodology/page.tsx so the user can navigate back.
+6. Re-wire the MCO 3000.13B · para 7c chip
+Change the header chip on the home page from an external <a target="_blank"> to an internal <Link href="/methodology/#formulas">. Update the title= tooltip to “View methodology (formulas section)”. The external MCO PDF stays linked from the §Sources block in methodologyBlocks.tsx:397 (already present) and is reachable via /methodology/#sources.
+7. Rebuild docs/ for GitHub Pages

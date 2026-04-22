@@ -461,6 +461,88 @@ html, body {
   color: #fff;
   border-bottom-color: #cf9d2b;
 }
+.header-nav a[aria-current="page"] {
+  color: #fff;
+  border-bottom-color: #cf9d2b;
+  font-weight: 600;
+}
+
+/* Methodology page layout: sticky TOC on the left, content on the right. */
+.methodology-page {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+.meth-toc {
+  position: sticky;
+  top: 16px;
+  font-size: 14px;
+}
+.meth-toc-inner {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.meth-toc-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.meth-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meth-toc-list a {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.meth-toc-list a:hover,
+.meth-toc-list a:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.meth-toc-num {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 20px;
+}
+.meth-toc-back {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.meth-toc-back a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.meth-toc-back a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .methodology-page {
+    grid-template-columns: 1fr;
+  }
+  .meth-toc {
+    position: static;
+  }
+}
 
 /* Methodology (accordion) */
 .methodology h2 { margin: 0; }
@@ -1068,7 +1150,7 @@ a.cite-chip:focus-visible {
   @page { margin: 0.5in; }
   html, body { background: #fff; color: #000; font-size: 11pt; }
   .site-header, .site-footer, .header-nav, .banner.opsec,
-  #upload-section, #methodology-section,
+  #upload-section,
   .results-actions, .skip-link { display: none !important; }
 
   .wrap { max-width: none; padding: 0; }

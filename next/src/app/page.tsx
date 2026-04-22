@@ -19,7 +19,15 @@ export default function Home() {
       <div className="mx-auto w-full max-w-7xl px-6 py-8">
         <header className="mb-8 border-b border-[var(--color-elevated)] pb-6">
           <p className="font-mono text-xs uppercase tracking-widest text-[var(--color-accent-head)]">
-            MCO 3000.13B &middot; para 7c
+            <a
+              href="https://www.marines.mil/Portals/1/Publications/MCO%203000.13B.pdf?ver=2020-07-15-110758-503"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+              title="Open MCO 3000.13B (opens in a new tab)"
+            >
+              MCO 3000.13B &middot; para 7c
+            </a>
           </p>
           <div className="mt-2 flex items-center gap-4">
             <img

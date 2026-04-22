@@ -392,10 +392,62 @@ const blocks: Block[] = [
       <>
         <div className="font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Primary Calculation Authority</div>
         <ul className="ml-4 mt-1 list-disc space-y-1 text-xs text-[var(--color-body)]">
-          <li>MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c</li>
-          <li>MARADMIN 518-21 DRRS-MC Consolidation to DRRS</li>
-          <li>Commander&apos;s Readiness Handbook (16 SEP 2020)</li>
+          <li>
+            <a
+              href="https://www.marines.mil/Portals/1/Publications/MCO%203000.13B.pdf?ver=2020-07-15-110758-503"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+            >
+              MCO 3000.13B DRRS Marine Corps Readiness Reporting, paragraph 7c
+              <span aria-hidden="true"> &#x2197;</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.marines.mil/News/Messages/Messages-Display/Article/2795272/drrs-mc-consolidation-to-drrs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+            >
+              MARADMIN 518-21 DRRS-MC Consolidation to DRRS
+              <span aria-hidden="true"> &#x2197;</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.usmcu.edu/Portals/218/Commanders_Readiness_Handbook_2020-09-16.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+            >
+              Commander&apos;s Readiness Handbook (16 SEP 2020)
+              <span aria-hidden="true"> &#x2197;</span>
+            </a>
+          </li>
           <li>Personnel Readiness SHO/MOC (Updated OCT 2025)</li>
+          <li>
+            <a
+              href="https://www.marines.mil/News/Messages/Messages-Display/Article/3857865/identification-of-marine-corps-readiness-reportable-ground-equipment/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+            >
+              MARADMIN 350/24 Identification of Marine Corps Readiness Reportable Ground Equipment
+              <span aria-hidden="true"> &#x2197;</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.marines.mil/News/Messages/Messages-Display/Article/890469/defense-readiness-reporting-system-drrs-implementation-responsibilities-for-mar/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[var(--color-accent)] underline underline-offset-2 hover:text-[var(--color-accent-hi)]"
+            >
+              MARADMIN 390/07 Defense Readiness Reporting System (DRRS) Implementation Responsibilities for Marine Corps
+              <span aria-hidden="true"> &#x2197;</span>
+            </a>
+          </li>
         </ul>
 
         <div className="mt-3 font-mono text-xs uppercase tracking-widest text-[var(--color-muted)]">Compliance Framework Authority</div>
